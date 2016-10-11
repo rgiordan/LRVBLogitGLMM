@@ -1,0 +1,11 @@
+Package: LogitGLMMLRVB
+Type: Package
+Title: Kicks butt
+Version: 1.0
+Date: 2016-07-05
+Author: Ryan Giordano
+Maintainer: Ryan Giordano <rgiordan@gmail.com>
+Description: So much butt
+License: GPL (>= 2)
+Imports: Rcpp (>= 0.12.5)
+LinkingTo: Rcpp,RcppEigen

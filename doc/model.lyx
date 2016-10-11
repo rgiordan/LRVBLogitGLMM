@@ -1,0 +1,417 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_math auto
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+\begin_inset FormulaMacro
+\newcommand{\mbi}{\mathbb{I}}
+{\mathbb{I}}
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset FormulaMacro
+\newcommand{\mbe}{\mathbb{E}}
+{\mathbb{E}}
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Boilerplate
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+\log P\left(Y\right) & = & Y\log p+\left(1-Y\right)\log\left(1-p\right)\\
+ & = & Y\log\frac{p}{1-P}+\log\left(1-p\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Simple GLMM
+\end_layout
+
+\begin_layout Standard
+Here is a simple GLMM with non-analytic expectations.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+y_{it} & \sim & Bernoulli\left(p_{it}\right)\\
+p_{it} & = & \frac{e^{\rho}}{1+e^{\rho}}\\
+\rho & = & \log\left(\frac{p_{it}}{1-p_{it}}\right)=x_{it}^{T}\beta+u_{t}\\
+u_{t} & \sim & \mathcal{N}\left(\mu,\tau^{-1}\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We can assign priors
+\begin_inset Formula 
+\begin{eqnarray*}
+\mu & \sim & \mathcal{N}\left(\mu_{0},\sigma_{\mu}^{2}\right)\\
+\tau & \sim & Gamma\left(\alpha_{\tau},\beta_{\tau}\right)\\
+\beta & \sim & \mathcal{N}\left(\beta_{0},\Sigma_{\beta}\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The log likelihood is then
+\begin_inset Formula 
+\begin{eqnarray*}
+\log P\left(y_{it}\vert u_{t},\beta\right) & = & y_{it}\log\left(\frac{p_{it}}{1-p_{it}}\right)+\log\left(1-p_{it}\right)\\
+ & = & y_{it}\rho+\log\left(1-p_{it}\right)+C\\
+\log P\left(u\vert\mu,\tau\right) & = & -\frac{1}{2}\tau\sum_{t=1}^{T}\left(u_{t}-\mu\right)^{2}-\frac{1}{2}T\log\tau\\
+ & = & -\frac{1}{2}\tau\sum_{t=1}^{T}\left(u_{t}^{2}-\mu u_{t}+\mu^{2}\right)-\frac{1}{2}T\log\tau+C\\
+\log P\left(\mu,\tau,\beta\right) & = & -\frac{1}{2}\sigma_{\mu}^{-2}\left(\mu^{2}+2\mu\mu_{0}\right)+\\
+ &  & \left(1-\alpha_{\tau}\right)\tau+\beta_{\tau}\log\tau+\textrm{ (TODO: check)}\\
+ &  & -\frac{1}{2}\left(\textrm{trace}\left(\Sigma_{\beta}^{-1}\beta\beta^{T}\right)+2\textrm{trace}\left(\Sigma_{\beta}^{-1}\beta_{0}\beta^{T}\right)\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Note that,
+\begin_inset Formula 
+\begin{eqnarray*}
+\rho & = & x_{it}^{T}\beta+u_{t}\\
+\mbe_{q}\left[\rho\right] & = & x_{it}^{T}\mbe_{q}\left[\beta\right]+\mbe_{q}\left[u_{t}\right]\\
+\textrm{Var}_{q}\left(\rho\right) & = & \mbe_{q}\left[\beta^{T}x_{it}x_{it}^{T}\beta\right]-\mbe_{q}\left[\beta\right]^{T}x_{it}x_{it}^{T}\mbe_{q}\left[\beta\right]+\textrm{Var}_{q}\left(u_{t}\right)\\
+ & = & \mbe_{q}\left[\textrm{tr}\left(\beta^{T}x_{it}x_{it}^{T}\beta\right)\right]-\textrm{tr}\left(\mbe_{q}\left[\beta\right]^{T}x_{it}x_{it}^{T}\mbe_{q}\left[\beta\right]\right)+\textrm{Var}_{q}\left(u_{t}\right)\\
+ & = & \textrm{tr}\left(x_{it}x_{it}^{T}\left(\mbe_{q}\left[\beta\beta^{T}\right]-\mbe_{q}\left[\beta\right]\mbe_{q}\left[\beta\right]^{T}\right)\right)+\textrm{Var}_{q}\left(u_{t}\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+And we will need to use MC to estimate
+\begin_inset Formula 
+\begin{eqnarray*}
+\mbe_{q}\left[\log\left(1-p_{it}\right)\right] & = & \mbe_{q}\left[\log\left(1-\frac{e^{\rho}}{1+e^{\rho}}\right)\right]
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+LRVB
+\end_layout
+
+\begin_layout Standard
+We need
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+\hat{\Sigma} & = & \left(\frac{\partial^{2}E}{\partial m\partial m^{T}}\right)^{-1}
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In terms of a general parameter, 
+\begin_inset Formula $\gamma$
+\end_inset
+
+ with 
+\begin_inset Formula 
+\begin{eqnarray*}
+m & = & m\left(\gamma\right)\\
+J & := & \frac{\partial m}{\partial\gamma^{T}}\\
+J^{-1} & = & \frac{\partial\gamma}{\partial m^{T}}
+\end{eqnarray*}
+
+\end_inset
+
+,
+\begin_inset Formula 
+\begin{eqnarray*}
+\hat{\Sigma} & = & \left(\left(\frac{\partial\gamma}{\partial m^{T}}\right)^{T}\frac{\partial^{2}E}{\partial\gamma\partial\gamma^{T}}\left(\frac{\partial\gamma}{\partial m^{T}}\right)\right)^{-1}\\
+ & = & \left(\left(J^{-1}\right)^{T}\frac{\partial^{2}E}{\partial\gamma\partial\gamma^{T}}J^{-1}\right)^{-1}\\
+ & = & J\left(\frac{\partial^{2}E}{\partial\gamma\partial\gamma^{T}}\right)^{-1}J^{T}
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To subdivide this expression,
+\begin_inset Formula 
+\begin{eqnarray*}
+J & = & \left(\begin{array}{cc}
+J_{\theta} & 0\\
+0 & J_{Z}
+\end{array}\right)\\
+Q & = & \frac{\partial^{2}E}{\partial\gamma\partial\gamma^{T}}=\left(\begin{array}{cc}
+Q_{\theta} & Q_{\theta Z}\\
+Q_{Z\theta} & Q_{ZZ}
+\end{array}\right)\\
+\hat{\Sigma} & = & \left(\begin{array}{cc}
+\Sigma_{\theta} & \Sigma_{\theta Z}\\
+\Sigma_{Z\theta} & \Sigma_{ZZ}
+\end{array}\right)\\
+ & = & \left(\begin{array}{cc}
+J_{\theta} & 0\\
+0 & J_{Z}
+\end{array}\right)\left(\begin{array}{cc}
+Q_{\theta} & Q_{\theta Z}\\
+Q_{Z\theta} & Q_{ZZ}
+\end{array}\right)^{-1}\left(\begin{array}{cc}
+J_{\theta} & 0\\
+0 & J_{Z}
+\end{array}\right)^{T}\\
+\Sigma_{\theta} & = & J_{\theta}\left(Q_{\theta}-Q_{\theta Z}Q_{ZZ}^{-1}Q_{Z\theta}\right)^{-1}J_{\theta}^{T}
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+However, note that unlike the original formulation, here you cannot divide
+ the expression into covariance (which will change) and log likelihood (which
+ may not).
+\end_layout
+
+\begin_layout Section
+Barn Swallows
+\end_layout
+
+\begin_layout Standard
+The model is
+\begin_inset Formula 
+\begin{eqnarray*}
+y_{it} & = & \begin{cases}
+0: & \textrm{Barn swallow }i\textrm{ was not seen at time }t\\
+1: & \textrm{Barn swallow }i\textrm{ was seen at time }t
+\end{cases}\\
+z_{it} & = & \begin{cases}
+0: & \textrm{Barn swallow }i\textrm{ was not alive at time }t\\
+1: & \textrm{Barn swallow }i\textrm{ was alive at time }t
+\end{cases}\\
+z_{it}\vert z_{i\left(t-1\right)}=1 & \sim & \textrm{Bernoulli}\left(\Phi_{it}\right)\\
+y_{it}\vert z_{i\left(t-1\right)}=1 & \sim & \textrm{Bernoulli}\left(p_{it}\right)\\
+z_{i\left(t-1\right)}=0 & \Rightarrow & z_{it}=y_{it}=0\\
+\textrm{Logit}\left(\Phi_{it}\right) & = & \alpha_{0t}+\alpha_{1}carez_{i}+\epsilon_{year[i]}+\gamma_{family[i]}\\
+ & =: & \alpha^{T}x_{i}^{survive}+\epsilon_{year[i]}+\gamma_{family[i]}\\
+\textrm{Logit}\left(p_{it}\right) & = & \beta_{0year[i]}+\beta_{1year[i]}agec_{i}+\delta_{family[i]}\\
+ & =: & \beta^{T}x_{i}^{observe}+\delta_{family[i]}\\
+\epsilon_{year} & \sim & \mathcal{N}\left(0,\sigma_{\phi year}^{2}\right)\\
+\gamma_{year} & \sim & \mathcal{N}\left(0,\sigma_{\phi family}^{2}\right)\\
+\delta_{family} & \sim & \mathcal{N}\left(0,\sigma_{pfamiliy}^{2}\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Additionally, we model separately the probability that a bird is never seen
+ after the last day.
+ These alone require marginalizing over 
+\begin_inset Formula $z_{it}$
+\end_inset
+
+, and are
+\begin_inset Formula 
+\begin{eqnarray*}
+\textrm{For }t=t_{last}+1:\\
+P\left(y_{it}=0\vert z_{i\left(t-1\right)}=1\right) & = & P\left(y_{it}=0\vert z_{it}=1\right)P\left(z_{it}=1\vert z_{i\left(t-1\right)}=1\right)+P\left(y_{it}=0\vert z_{it}=0\right)P\left(z_{it}=0\vert z_{i\left(t-1\right)}=1\right)\\
+ & = & P\left(y_{it}=0\vert z_{it}=1\right)P\left(z_{it}=1\vert z_{i\left(t-1\right)}=1\right)+P\left(z_{it}=0\vert z_{i\left(t-1\right)}=1\right)\\
+ & = & p_{it}\Phi_{it}+\left(1-\Phi_{it}\right)\\
+ & = & 1-\Phi_{it}\left(1-p_{it}\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The book integrates out 
+\begin_inset Formula $z$
+\end_inset
+
+, but it will be more convenient to model it, since otherwise we need to
+ evaluate expectations of powers of 
+\begin_inset Formula $p$
+\end_inset
+
+ and 
+\begin_inset Formula $\Phi$
+\end_inset
+
+.
+ Given 
+\begin_inset Formula $p$
+\end_inset
+
+ and 
+\begin_inset Formula $\Phi$
+\end_inset
+
+, the last observation is a categorical over the number of days remaining
+ plus one.
+\begin_inset Formula 
+\begin{eqnarray*}
+\zeta_{i} & \in & \left\{ 0,...,T-t_{last}\right\} \\
+P\left(\zeta_{i}=k<T-t_{last}\vert\Phi_{it},p_{it}\right) & = & \left(1-\Phi_{iT}\right)\prod_{t=t_{last}+1}^{t_{last}+k}\left(\Phi_{it}\left(1-p_{it}\right)\right)\\
+P\left(\zeta_{i}=T-t_{last}\vert\Phi_{it},p_{it}\right) & = & \prod_{t=t_{last}+1}^{T}\left(\Phi_{it}\left(1-p_{it}\right)\right)\Rightarrow\\
+\log P\left(\zeta_{i}\vert\Phi_{it},p_{it}\right) & = & \log\left(1-\Phi_{iT}\right)\mbi\left(\zeta_{i}<T-t_{last}\right)+\\
+ &  & \sum_{t=t_{last}+1}^{T}\log\left(\Phi_{it}\left(1-p_{it}\right)\right)\mbi\left(\zeta_{i}\le T-t_{last}+t\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This is how the book has it, but since 
+\begin_inset Formula $y_{it}=1\Rightarrow z_{it}=1$
+\end_inset
+
+ it will be more convenient to write it as
+\begin_inset Formula 
+\begin{eqnarray*}
+P\left(y,z\vert\Phi,p\right) & \propto & \prod_{i,t}p_{it}^{y_{it}z_{it}}\Phi_{it}^{z_{it}}\mbi\left(y_{it}=1\Rightarrow z_{it}=1\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Recall that
+\begin_inset Formula 
+\begin{eqnarray*}
+p & = & \frac{e^{x}}{1+e^{x}}=\textrm{Invlogit}\left(x\right)\\
+x & = & \log\left(\frac{p}{1-p}\right)=\textrm{Logit}\left(p\right)\\
+\log\left(1-p\right) & = & \log\left(\frac{1}{1+e^{x}}\right)=-\log\left(1+e^{x}\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The log likelihood is
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+\ell\left(y_{it},z_{it}\vert\Phi,p,\epsilon,\gamma,\delta\right) & = & y_{it}z_{it}\left(\beta^{T}x_{i}^{observe}+\delta_{family[i]}\right)-\\
+ &  & \log\left(1+\exp\left(\beta^{T}x_{i}^{observe}+\delta_{family[i]}\right)\right)+\\
+ &  & z_{it}\left(\alpha^{T}x_{i}^{survive}+\epsilon_{year[i]}+\gamma_{family[i]}\right)-\\
+ &  & \log\left(1+\exp\left(\alpha^{T}x_{i}^{survive}+\epsilon_{year[i]}+\gamma_{family[i]}\right)\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document

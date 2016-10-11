@@ -1,0 +1,16 @@
+## -*- mode: makefile; -*-
+
+PKG_CXXFLAGS=\
+-I /home/rgiordan/Documents/git_repos/variational_bayes/logit_glmm/include \
+-I /home/rgiordan/Documents/git_repos/LinearResponseVariationalBayes.cpp/include \
+-I /home/rgiordan/R/x86_64-pc-linux-gnu-library/3.2/RcppEigen/include \
+-I /home/rgiordan/Documents/git_repos/math/ \
+-I /home/rgiordan/Documents/git_repos/math/lib/boost_1.60.0/boost/math/special_functions \
+-I /home/rgiordan/Documents/git_repos/math/lib/boost_1.60.0/boost/math/tools \
+-I /home/rgiordan/Documents/git_repos/math/lib/boost_1.60.0/
+
+PKG_LIBS= -lLogitGLMMLRVB -lLinearResponseVariationalBayes
+
+PKG_CPPFLAGS= -Wno-deprecated -fPIC
+
+CXX_STD = CXX11
