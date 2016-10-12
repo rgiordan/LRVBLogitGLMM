@@ -3,8 +3,8 @@
 echo -e "\n\n\n"
 echo $(date)
 pushd .
-BUILD_LOC=$GIT_REPO_LOC"/variational_bayes/logit_glmm/build"
-R_PACKAGE_LOC=$GIT_REPO_LOC"/variational_bayes/logit_glmm/LogitGLMMLRVB"
+BUILD_LOC=$GIT_REPO_LOC"/LRVBLogitGLMM/build"
+R_PACKAGE_LOC=$GIT_REPO_LOC"/LRVBLogitGLMM/LogitGLMMLRVB"
 cd $BUILD_LOC
 sudo make install
 if [ $? -ne 0 ]; then
