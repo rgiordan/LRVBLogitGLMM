@@ -184,5 +184,92 @@ And we will need to use MC to estimate
 
 \end_layout
 
+\begin_layout Section
+LRVB
+\end_layout
+
+\begin_layout Standard
+We need
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+\hat{\Sigma} & = & \left(\frac{\partial^{2}E}{\partial m\partial m^{T}}\right)^{-1}
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In terms of a general parameter, 
+\begin_inset Formula $\gamma$
+\end_inset
+
+ with 
+\begin_inset Formula 
+\begin{eqnarray*}
+m & = & m\left(\gamma\right)\\
+J & := & \frac{\partial m}{\partial\gamma^{T}}\\
+J^{-1} & = & \frac{\partial\gamma}{\partial m^{T}}
+\end{eqnarray*}
+
+\end_inset
+
+,
+\begin_inset Formula 
+\begin{eqnarray*}
+\hat{\Sigma} & = & \left(\left(\frac{\partial\gamma}{\partial m^{T}}\right)^{T}\frac{\partial^{2}E}{\partial\gamma\partial\gamma^{T}}\left(\frac{\partial\gamma}{\partial m^{T}}\right)\right)^{-1}\\
+ & = & \left(\left(J^{-1}\right)^{T}\frac{\partial^{2}E}{\partial\gamma\partial\gamma^{T}}J^{-1}\right)^{-1}\\
+ & = & J\left(\frac{\partial^{2}E}{\partial\gamma\partial\gamma^{T}}\right)^{-1}J^{T}
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To subdivide this expression,
+\begin_inset Formula 
+\begin{eqnarray*}
+J & = & \left(\begin{array}{cc}
+J_{\theta} & 0\\
+0 & J_{Z}
+\end{array}\right)\\
+Q & = & \frac{\partial^{2}E}{\partial\gamma\partial\gamma^{T}}=\left(\begin{array}{cc}
+Q_{\theta} & Q_{\theta Z}\\
+Q_{Z\theta} & Q_{ZZ}
+\end{array}\right)\\
+\hat{\Sigma} & = & \left(\begin{array}{cc}
+\Sigma_{\theta} & \Sigma_{\theta Z}\\
+\Sigma_{Z\theta} & \Sigma_{ZZ}
+\end{array}\right)\\
+ & = & \left(\begin{array}{cc}
+J_{\theta} & 0\\
+0 & J_{Z}
+\end{array}\right)\left(\begin{array}{cc}
+Q_{\theta} & Q_{\theta Z}\\
+Q_{Z\theta} & Q_{ZZ}
+\end{array}\right)^{-1}\left(\begin{array}{cc}
+J_{\theta} & 0\\
+0 & J_{Z}
+\end{array}\right)^{T}\\
+\Sigma_{\theta} & = & J_{\theta}\left(Q_{\theta}-Q_{\theta Z}Q_{ZZ}^{-1}Q_{Z\theta}\right)^{-1}J_{\theta}^{T}
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+However, note that unlike the original formulation, here you cannot divide
+ the expression into covariance (which will change) and log likelihood (which
+ may not).
+\end_layout
+
 \end_body
 \end_document
