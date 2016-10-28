@@ -13,7 +13,7 @@ if [ $? -ne 0 ]; then
    exit 1
 fi
 cd $R_PACKAGE_LOC
-echo 'library(devtools); library(Rcpp); compileAttributes("'$R_PACKAGE_LOC'"); install_local("'$R_PACKAGE_LOC'")' | R --vanilla
+echo 'library(devtools); library(Rcpp); compileAttributes("'$R_PACKAGE_LOC'"); install_local("'$R_PACKAGE_LOC'", force=TRUE)' | R --vanilla
 popd
 
 echo $(date)

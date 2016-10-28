@@ -39,14 +39,14 @@ ConvertParametersToList(VariationalMomentParameters<double> const &vp) {
     r_list["tau_e"] = vp.tau.e;
     r_list["tau_e_log"] = vp.tau.e_log;
 
-    Rcpp::List u_vec(vp.n_groups);
+    Rcpp::List u(vp.n_groups);
     for (int g = 0; g < vp.n_groups; g++) {
         Rcpp::List this_u;
         this_u["u_e"] = vp.u[g].e;
         this_u["u_e2"] = vp.u[g].e2;
-        u_vec[g] = this_u;
+        u[g] = this_u;
     }
-    r_list["u_vec"] = u_vec;
+    r_list["u"] = u;
 
     return r_list;
 };
@@ -67,7 +67,7 @@ void ConvertParametersFromList(
     vp.tau.e = Rcpp::as<double>(r_list["tau_e"]);
     vp.tau.e_log = Rcpp::as<double>(r_list["tau_e_log"]);
 
-    Rcpp::List u_list = r_list["u_vec"];
+    Rcpp::List u_list = r_list["u"];
     if (vp.n_groups != u_list.size()) {
         throw std::runtime_error("u size does not match");
     }
@@ -100,19 +100,19 @@ Rcpp::List ConvertParametersToList(VariationalNaturalParameters<double> const &v
     r_list["tau_alpha_min"] = vp.tau.alpha_min;
     r_list["tau_beta_min"] = vp.tau.beta_min;
 
-    Rcpp::List u_vec(vp.n_groups);
+    Rcpp::List u(vp.n_groups);
     double u_info_min = 0;
     for (int g = 0; g < vp.n_groups; g++) {
         Rcpp::List this_u;
         this_u["u_loc"] = vp.u[g].loc;
         this_u["u_info"] = vp.u[g].info;
-        u_vec[g] = this_u;
+        u[g] = this_u;
         if (g == 0 || u_info_min > vp.u[g].info_min) {
             u_info_min = vp.u[g].info_min;
         }
     }
 
-    r_list["u_vec"] = u_vec;
+    r_list["u"] = u;
 
     // Set the info min to the smallest lower bound.
     r_list["u_info_min"] = u_info_min;
@@ -140,7 +140,7 @@ void ConvertParametersFromList(
     vp.tau.alpha_min = Rcpp::as<double>(r_list["tau_alpha_min"]);
     vp.tau.beta_min = Rcpp::as<double>(r_list["tau_beta_min"]);
 
-    Rcpp::List u_list = r_list["u_vec"];
+    Rcpp::List u_list = r_list["u"];
     if (vp.n_groups != u_list.size()) {
         throw std::runtime_error("u size does not match");
     }
@@ -448,11 +448,15 @@ Rcpp::List GetLogVariationalDensityDerivatives(
     const Rcpp::List r_opt) {
 
     ModelOptions opt = ConvertListToOption(r_opt);
+    Rcpp::Rcout << ".\n";
     VariationalNaturalParameters<double> vp =
         ConvertNaturalParametersFromList(r_vp);
+    Rcpp::Rcout << ".\n";
     VariationalMomentParameters<double> obs =
         ConvertMomentParametersFromList(r_obs);
+    Rcpp::Rcout << ".\n";
     Derivatives derivs = GetLogVariationalDensityDerivatives(obs, vp, opt);
+    Rcpp::Rcout << ".\n";
     return ConvertDerivativesToList(derivs, opt);
 };
 

@@ -396,7 +396,7 @@ struct VariationalLogDensityFunctor {
         base_vp = VariationalNaturalParameters<double>(vp);
         obs = VariationalMomentParameters<double>(_obs);
         include_mu = include_beta = include_tau = true;
-        VectorXd include_mu_groups(base_vp.n_groups);
+        include_u_groups = VectorXi::Zero(base_vp.n_groups);
         for (int g = 0; g < base_vp.n_groups; g++) {
           include_u_groups(g) = g;
         }

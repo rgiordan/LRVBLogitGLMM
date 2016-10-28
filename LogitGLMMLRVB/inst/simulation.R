@@ -40,8 +40,8 @@ vp_nat$mu_loc <- 0
 vp_nat$tau_alpha <- 2
 vp_nat$tau_beta <- 2
 for (g in 1:n_groups) {
-  vp_nat$u_vec[[g]]$u_loc <- 0
-  vp_nat$u_vec[[g]]$u_info <- 1
+  vp_nat$u[[g]]$u_loc <- 0
+  vp_nat$u[[g]]$u_info <- 1
 }
 
 mcmc_sample <- extract(stan_results$stan_sim)
@@ -111,6 +111,8 @@ log_prior_grad_mat <- do.call(rbind, log_prior_grad_list)
 # Influence functions
 
 obs <- mp_draws[[1]]
+
+# Segfaulting:
 GetLogVariationalDensityDerivatives(mp_draws[[1]], vp_opt, opt)
 
 
@@ -136,12 +138,12 @@ if (FALSE) {
   ggplot(
     filter(results, metric == "sd") %>%
       dcast(par + component + group ~ method, value.var="val") %>%
-      mutate(is_u = par == "u")
-  ) +
+      mutate(is_u = par == "u")) +
     geom_point(aes(x=mcmc, y=mfvb, color="mfvb"), size=3) +
     geom_point(aes(x=mcmc, y=lrvb, color="lrvb"), size=3) +
     geom_abline(aes(intercept=0, slope=1)) +
-    facet_grid(~ is_u)
+    facet_grid(~ is_u) +
+    ggtitle("Posterior standard deviations")
 
   ggplot(
     filter(results, metric == "sd", par == "u") %>%
