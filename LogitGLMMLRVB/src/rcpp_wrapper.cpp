@@ -312,6 +312,11 @@ Rcpp::List GetNaturalParametersFromVector(
     return vp_list;
 }
 
+// [[Rcpp::export]]
+Rcpp::List GetEmptyPriorParameters(int k_reg) {
+    PriorParameters<double> pp(k_reg);
+    return ConvertPriorParametersToList(pp);
+}
 
 // [[Rcpp::export]]
 Rcpp::List GetPriorParametersFromVector(
@@ -448,15 +453,11 @@ Rcpp::List GetLogVariationalDensityDerivatives(
     const Rcpp::List r_opt) {
 
     ModelOptions opt = ConvertListToOption(r_opt);
-    Rcpp::Rcout << ".\n";
     VariationalNaturalParameters<double> vp =
         ConvertNaturalParametersFromList(r_vp);
-    Rcpp::Rcout << ".\n";
     VariationalMomentParameters<double> obs =
         ConvertMomentParametersFromList(r_obs);
-    Rcpp::Rcout << ".\n";
     Derivatives derivs = GetLogVariationalDensityDerivatives(obs, vp, opt);
-    Rcpp::Rcout << ".\n";
     return ConvertDerivativesToList(derivs, opt);
 };
 

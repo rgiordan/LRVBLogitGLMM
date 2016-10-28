@@ -5,6 +5,7 @@ library(rstan)
 library(boot) # for inv.logit
 library(Matrix)
 library(mvtnorm)
+library(LogitGLMMLRVB)
 
 project_directory <-
   file.path(Sys.getenv("GIT_REPO_LOC"), "LRVBLogitGLMM")
@@ -49,8 +50,7 @@ y <- rbinom(n=n_obs, size=1, prob=inv.logit(true_offsets))
 ##########################
 # Prior parameters
 
-pp <- list()
-pp$k_reg <- k_reg
+pp <- GetEmptyPriorParameters(k_reg)
 
 pp$beta_loc <- rep(0, k_reg)
 pp$beta_info <- diag(k_reg)

@@ -1,3 +1,6 @@
+# First, run the script run_stan.R.  This will get the data and priors
+# from that script to ensure that the two analyses are doing everything the same.
+
 library(LogitGLMMLRVB)
 library(rstan)
 library(lme4)
@@ -5,6 +8,8 @@ library(lme4)
 library(dplyr)
 library(reshape2)
 library(trust)
+
+library(LRVBUtils)
 
 project_directory <-
   file.path(Sys.getenv("GIT_REPO_LOC"), "LRVBLogitGLMM")
@@ -15,8 +20,7 @@ analysis_name <- "simulated_data"
 data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
 stan_draws_file <- file.path(data_directory, paste(analysis_name, "_mcmc_draws.Rdata", sep=""))
 
-stan_results <- environment()
-load(stan_draws_file, envir=stan_results)
+stan_results <- LoadIntoEnvironment(stan_draws_file)
 
 true_params <- stan_results$true_params
 x <- stan_results$stan_dat$x
@@ -30,8 +34,6 @@ n_groups <- max(y_g) + 1
 prob <- SampleData(n_obs, k_reg, n_groups)
 
 pp <- stan_results$pp
-# Fix an obsolete verison of the prior parameters
-pp$encoded_size <- length(GetPriorParametersVector(pp, FALSE))
 
 vp_nat <- prob$vp_nat
 
@@ -73,28 +75,12 @@ vp_opt <- GetNaturalParametersFromVector(vp_nat, trust_result$argument, TRUE)
 
 
 # LRVB
-mfvb_cov <- GetCovariance(vp_opt)
 lrvb_results <- GetLRVBResults(y, y_g, x, vp_opt, pp, opt)
 lrvb_cov <- lrvb_results$lrvb_cov
 stopifnot(min(diag(lrvb_cov)) > 0)
 stopifnot(min(diag(mfvb_cov)) > 0)
 
 fit_time <- Sys.time() - fit_time
-
-
-#################################
-# Sensitivity analysis
-
-comb_indices <- GetPriorsAndNaturalParametersFromVector(
-  vp_opt, pp, as.numeric(1:(vp_opt$encoded_size + pp$encoded_size)), FALSE)
-comb_prior_ind <- GetPriorParametersVector(comb_indices$pp, FALSE)
-comb_vp_ind <- GetNaturalParameterVector(comb_indices$vp, FALSE)
-
-opt$calculate_hessian <- TRUE
-log_prior_derivs <- GetFullModelLogPriorDerivatives(vp_opt, pp, opt)
-log_prior_param_prior <- Matrix(log_prior_derivs$hess[comb_vp_ind, comb_prior_ind])
-
-prior_sens <- -1 * lrvb_results$jac %*% Matrix::solve(lrvb_results$elbo_hess, log_prior_param_prior)
 
 
 #####################################
@@ -106,53 +92,10 @@ draws_mat <- do.call(rbind, lapply(mp_draws, function(draw) GetMomentParameterVe
 log_prior_grad_list <- GetMCMCLogPriorDerivatives(mp_draws, pp, opt)
 log_prior_grad_mat <- do.call(rbind, log_prior_grad_list)
 
+####################################
+# Save results
 
-##################
-# Influence functions
+vb_results_file <- file.path(data_directory, paste(analysis_name, "_vb_results.Rdata", sep=""))
+save(stan_results, vp_opt, mp_opt, lrvb_results, opt, fit_time,
+     log_prior_grad_mat, mp_draws, file=vb_results_file)
 
-obs <- mp_draws[[1]]
-
-# Segfaulting:
-GetLogVariationalDensityDerivatives(mp_draws[[1]], vp_opt, opt)
-
-
-#############################
-# Unpack the results.
-
-vp_mom <- GetMomentParametersFromNaturalParameters(vp_opt)
-lrvb_sd <- GetMomentParametersFromVector(vp_mom, sqrt(diag(lrvb_cov)), FALSE)
-mfvb_sd <- GetMomentParametersFromVector(vp_mom, sqrt(diag(mfvb_cov)), FALSE)
-
-results <- SummarizeResults(mcmc_sample, vp_mom, mfvb_sd, lrvb_sd)
-
-if (FALSE) {
-  ggplot(
-    filter(results, metric == "mean") %>%
-      dcast(par + component + group ~ method, value.var="val") %>%
-      mutate(is_u = par == "u")
-  ) +
-    geom_point(aes(x=mcmc, y=mfvb, color=par), size=3) +
-    geom_abline(aes(intercept=0, slope=1)) +
-    facet_grid(~ is_u)
-
-  ggplot(
-    filter(results, metric == "sd") %>%
-      dcast(par + component + group ~ method, value.var="val") %>%
-      mutate(is_u = par == "u")) +
-    geom_point(aes(x=mcmc, y=mfvb, color="mfvb"), size=3) +
-    geom_point(aes(x=mcmc, y=lrvb, color="lrvb"), size=3) +
-    geom_abline(aes(intercept=0, slope=1)) +
-    facet_grid(~ is_u) +
-    ggtitle("Posterior standard deviations")
-
-  ggplot(
-    filter(results, metric == "sd", par == "u") %>%
-      dcast(par + component + group ~ method, value.var="val")
-  ) +
-    geom_point(aes(x=mcmc, y=mfvb, color="mfvb"), size=3) +
-    geom_point(aes(x=mcmc, y=lrvb, color="lrvb"), size=3) +
-    expand_limits(x=0, y=0) +
-    xlab("MCMC (ground truth)") + ylab("VB") +
-    scale_color_discrete(guide=guide_legend(title="Method")) +
-    geom_abline(aes(intercept=0, slope=1))
-}

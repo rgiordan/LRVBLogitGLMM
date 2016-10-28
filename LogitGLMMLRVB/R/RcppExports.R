@@ -25,6 +25,10 @@ GetNaturalParametersFromVector <- function(r_vp_base, r_theta, unconstrained) {
     .Call('LogitGLMMLRVB_GetNaturalParametersFromVector', PACKAGE = 'LogitGLMMLRVB', r_vp_base, r_theta, unconstrained)
 }
 
+GetEmptyPriorParameters <- function(k_reg) {
+    .Call('LogitGLMMLRVB_GetEmptyPriorParameters', PACKAGE = 'LogitGLMMLRVB', k_reg)
+}
+
 GetPriorParametersFromVector <- function(r_pp, r_theta, unconstrained) {
     .Call('LogitGLMMLRVB_GetPriorParametersFromVector', PACKAGE = 'LogitGLMMLRVB', r_pp, r_theta, unconstrained)
 }

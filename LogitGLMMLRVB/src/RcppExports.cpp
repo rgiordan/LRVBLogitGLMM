@@ -80,6 +80,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// GetEmptyPriorParameters
+Rcpp::List GetEmptyPriorParameters(int k_reg);
+RcppExport SEXP LogitGLMMLRVB_GetEmptyPriorParameters(SEXP k_regSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type k_reg(k_regSEXP);
+    rcpp_result_gen = Rcpp::wrap(GetEmptyPriorParameters(k_reg));
+    return rcpp_result_gen;
+END_RCPP
+}
 // GetPriorParametersFromVector
 Rcpp::List GetPriorParametersFromVector(const Rcpp::List r_pp, const Eigen::Map<Eigen::VectorXd> r_theta, bool unconstrained);
 RcppExport SEXP LogitGLMMLRVB_GetPriorParametersFromVector(SEXP r_ppSEXP, SEXP r_thetaSEXP, SEXP unconstrainedSEXP) {

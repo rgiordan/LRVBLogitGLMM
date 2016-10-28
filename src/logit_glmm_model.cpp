@@ -176,7 +176,6 @@ Derivatives GetLogVariationalDensityDerivatives(
     ModelOptions const &opt) {
 
     vp.unconstrained = opt.unconstrained;
-    std::cout << "^\n";
     VariationalLogDensityFunctor VariationalLogDensity(vp, obs);
 
     double val;
@@ -184,7 +183,6 @@ Derivatives GetLogVariationalDensityDerivatives(
     MatrixXd hess = MatrixXd::Zero(vp.offsets.encoded_size, vp.offsets.encoded_size);
     VectorXd theta = GetParameterVector(vp);
 
-    std::cout << "^\n";
     stan::math::set_zero_all_adjoints();
     if (opt.calculate_hessian) {
       stan::math::hessian(VariationalLogDensity, theta, val, grad, hess);
@@ -194,7 +192,6 @@ Derivatives GetLogVariationalDensityDerivatives(
       val = VariationalLogDensity(theta);
     }
 
-    std::cout << "^\n";
     return Derivatives(val, grad, hess);
 }
 
