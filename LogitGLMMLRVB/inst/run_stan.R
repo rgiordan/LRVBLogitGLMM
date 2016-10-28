@@ -7,7 +7,7 @@ library(Matrix)
 library(mvtnorm)
 
 project_directory <-
-  file.path(Sys.getenv("GIT_REPO_LOC"), "variational_bayes/logit_glmm")
+  file.path(Sys.getenv("GIT_REPO_LOC"), "LRVBLogitGLMM")
 
 analysis_name <- "simulated_data"
 
@@ -102,12 +102,13 @@ control <- list(adapt_t0 = 10,       # default = 10
 seed <- 42
 
 # Draw the draws and save.
-data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
-stan_draws_file <- file.path(data_directory, paste(analysis_name, "_mcmc_draws.Rdata", sep=""))
 mcmc_time <- Sys.time()
 stan_sim <- sampling(model, data = stan_dat, seed = seed,
                      chains = chains, iter = iters, control = control)
 mcmc_time <- Sys.time() - mcmc_time
+
+data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
+stan_draws_file <- file.path(data_directory, paste(analysis_name, "_mcmc_draws.Rdata", sep=""))
 save(stan_sim, mcmc_time, stan_dat, true_params, pp, file=stan_draws_file)
 
 # stan_advi <- vb(model, data = stan_dat,  algorithm="meanfield", output_samples=iters)

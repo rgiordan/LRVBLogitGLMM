@@ -7,7 +7,7 @@ library(reshape2)
 library(trust)
 
 project_directory <-
-  file.path(Sys.getenv("GIT_REPO_LOC"), "variational_bayes/logit_glmm")
+  file.path(Sys.getenv("GIT_REPO_LOC"), "LRVBLogitGLMM")
 source(file.path(project_directory, "LogitGLMMLRVB/inst/optimize_lib.R"))
 
 analysis_name <- "simulated_data"

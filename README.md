@@ -40,7 +40,7 @@ change periodically).  That may mean changing the numbers in these lines:
 ```
 # In $GIT_REPO_LOC/LRVBLogitGLMM/CmakeLists.txt:
 
-set(EIGEN_LIB ${GIT_REPO_LOC}/math/lib/eigen_3.2.8/)
+set(EIGEN_LIB ${GIT_REPO_LOC}/math/lib/eigen_3.2.9/)
 set(BOOST_LIB ${GIT_REPO_LOC}/math/lib/boost_1.60.0/)
 ```
 
@@ -50,6 +50,8 @@ You'll need the following R packages:
 # In R:
 install.packages(devtools)
 install.packages(Rcpp)
+library(devetools)
+install_github("rgiordan/LRVBUtils")
 ```
 
 Finally, as is paradigmatic with cmake, create a directory called ```build```
