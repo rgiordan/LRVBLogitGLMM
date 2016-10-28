@@ -64,5 +64,4 @@ cmake ..
 ```
 
 At this point, you can try to run ```compile_r_package.sh```.  If everything
-is successful, you can try to run the examples in
-```LogitGLMMLRVB/inst/```.
+is successful, you can try to run the examples in  ```LogitGLMMLRVB/inst/```.
