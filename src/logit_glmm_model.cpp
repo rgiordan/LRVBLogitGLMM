@@ -173,15 +173,29 @@ Derivatives GetEntropyDerivatives(
 Derivatives GetLogVariationalDensityDerivatives(
     VariationalMomentParameters<double> const &obs,
     VariationalNaturalParameters<double> &vp,
-    ModelOptions const &opt) {
+    ModelOptions const &opt,
+    bool global_only,
+    bool include_beta,
+    bool include_mu,
+    bool include_tau) {
 
     vp.unconstrained = opt.unconstrained;
     VariationalLogDensityFunctor VariationalLogDensity(vp, obs);
+    VariationalLogDensity.global_only = global_only;
+    VariationalLogDensity.include_beta = include_beta;
+    VariationalLogDensity.include_mu = include_mu;
+    VariationalLogDensity.include_tau = include_tau;
+
+    VectorXd theta;
+    if (global_only) {
+        theta = GetGlobalParameterVector(vp);
+    } else {
+        theta = GetParameterVector(vp);
+    }
 
     double val;
-    VectorXd grad = VectorXd::Zero(vp.offsets.encoded_size);
-    MatrixXd hess = MatrixXd::Zero(vp.offsets.encoded_size, vp.offsets.encoded_size);
-    VectorXd theta = GetParameterVector(vp);
+    VectorXd grad = VectorXd::Zero(theta.size());
+    MatrixXd hess = MatrixXd::Zero(theta.size(), theta.size());
 
     stan::math::set_zero_all_adjoints();
     if (opt.calculate_hessian) {

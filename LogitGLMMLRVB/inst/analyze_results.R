@@ -26,6 +26,19 @@ opt <- vb_results$opt
 pp <- vb_results$stan_results$pp
 lrvb_results <- vb_results$lrvb_results
 
+#############################
+# Indices
+
+pp_indices <- GetPriorParametersFromVector(pp, as.numeric(1:pp$encoded_size), FALSE)
+vp_indices <- GetNaturalParametersFromVector(vp_opt, as.numeric(1:vp_opt$encoded_size), FALSE)
+mp_indices <- GetMomentParametersFromVector(mp_opt, as.numeric(1:mp_opt$encoded_size), FALSE)
+
+global_mask <- rep(FALSE, vp_opt$encoded_size)
+global_indices <- unique(c(vp_indices$beta_loc, as.numeric(vp_indices$beta_info[]),
+                           vp_indices$mu_loc, vp_indices$mu_info,
+                           vp_indices$tau_alpha, vp_indices$tau_beta))
+global_mask[global_indices] <- TRUE
+
 #################################
 # Sensitivity analysis
 
@@ -38,15 +51,108 @@ opt$calculate_hessian <- TRUE
 log_prior_derivs <- GetFullModelLogPriorDerivatives(vp_opt, pp, opt)
 log_prior_param_prior <- Matrix(log_prior_derivs$hess[comb_vp_ind, comb_prior_ind])
 
-prior_sens <- -1 * lrvb_results$jac %*% Matrix::solve(lrvb_results$elbo_hess, log_prior_param_prior)
+prior_sens <- -1 * lrvb_results$jac %*% Matrix::solve(lrvb_results$elbo_hess, log_prior_param_prior)#
 
 
 ##################
 # Influence functions
 
-mp_draws <- vb_results$mp_draws
-obs <- mp_draws[[1]]
-log_q_derivs <- GetLogVariationalDensityDerivatives(mp_draws[[1]], vp_opt, opt)
+library(mvtnorm)
+
+# Monte Carlo samples
+n_samples <- 50000
+
+# Define functions necessary to compute influence function stuff
+
+# Just for testing
+draw <- mp_opt
+beta <- c(1.2, 2.0)
+
+GetBetaLogPrior <- function(beta, pp) {
+  # You can't use the VB priors because they are
+  # (1) a function of the natural parameters whose variance would have to be zero and
+  # (2) not normalized.
+  dmvnorm(beta, mean=pp$beta_loc, sigma=solve(pp$beta_info), log=TRUE)
+}
+
+
+GetBetaLogDensity <- function(beta, vp_opt, draw, pp, unconstrained, calculate_gradient) {
+  draw$beta_e_vec <- beta
+  draw$beta_e2_vec <- beta %*% t(beta)
+  opt$calculate_gradient <- calculate_gradient
+  opt$calculate_hessian <- FALSE
+  q_derivs <- GetLogVariationalDensityDerivatives(draw, vp_opt, opt, global_only=TRUE,
+                                                  include_beta=TRUE, include_mu=FALSE, include_tau=FALSE)
+  return(q_derivs)
+}
+
+# You could also do this more numerically stably with a Cholesky decomposition.
+lrvb_pre_factor <- -1 * lrvb_results$jac %*% solve(lrvb_results$elbo_hess)
+
+# Proposals based on q
+u_mean <- mp_opt$beta_e_vec
+# Increase the covariance for sampling.  How much is enough?
+u_cov <- (1.5 ^ 2) * solve(vp_opt$beta_info)
+GetULogDensity <- function(beta) {
+  dmvnorm(beta, mean=u_mean, sigma=u_cov, log=TRUE)
+}
+
+DrawU <- function(n_samples) {
+  rmvnorm(n_samples, mean=u_mean, sigma=u_cov)
+}
+u_draws <- DrawU(n_samples)
+
+
+GetLogPrior <- function(u) {
+  GetBetaLogPrior(u, pp)
+}
+
+# GetLogContaminatingPrior <- function(u) {
+#   GetMuLogStudentTPrior(u, pp_perturb)
+# }
+
+mp_draw <- mp_opt
+log_q_grad <- rep(0, vp_indices$encoded_size)
+GetLogVariationalDensity <- function(u) {
+  beta_q_derivs <- GetBetaLogDensity(u, vp_opt, mp_draw, pp, TRUE, TRUE)
+  log_q_grad[global_mask] <- beta_q_derivs$grad
+  list(val=beta_q_derivs$val, grad=log_q_grad)
+}
+
+GetLogVariationalDensity(beta)
+
+
+GetInfluenceFunctionSample <- GetInfluenceFunctionSampleFunction(
+  GetLogVariationalDensity, GetLogPrior, GetULogDensity, lrvb_pre_factor)
+
+GetInfluenceFunctionSample(u_draws[1, ])
+
+Rprof("/tmp/rprof")
+influence_list <- list()
+pb <- txtProgressBar(min=1, max=nrow(u_draws), style=3)
+for (ind in 1:nrow(u_draws)) {
+  setTxtProgressBar(pb, ind)
+  influence_list[[ind]] <- GetInfluenceFunctionSample(u_draws[ind, ])
+}
+close(pb)
+summaryRprof("/tmp/rprof")
+
+
+
+
+names(influence_list[[1]])
+influence_vector_list <- lapply(influence_list, function(x) as.numeric(x$influence_function))
+influence_matrix <- do.call(rbind, influence_vector_list)
+
+ind <- pp_indices$beta_loc[1]; param_name <- "beta1" 
+influence_df <-
+  data.frame(beta1=u_draws[, 1], beta2=u_draws[, 2], influence=influence_matrix[, ind], param_name=param_name)
+
+ggplot(influence_df) +
+  geom_point(aes(x=beta1, y=beta2, color=influence), alpha=0.2) +
+  geom_point(aes(x=mp_opt$beta_e_vec[1], y=mp_opt$beta_e_vec[2]), color="red", size=2) +
+  ggtitle(paste("Influence of beta prior on ", param_name)) +
+  scale_color_gradient2()
 
 
 #############################
@@ -70,7 +176,7 @@ if (FALSE) {
     geom_point(aes(x=mcmc, y=mfvb, color=par), size=3) +
     geom_abline(aes(intercept=0, slope=1)) +
     facet_grid(~ is_u)
-  
+
   ggplot(
     filter(results, metric == "sd") %>%
       dcast(par + component + group ~ method, value.var="val") %>%
@@ -80,7 +186,7 @@ if (FALSE) {
     geom_abline(aes(intercept=0, slope=1)) +
     facet_grid(~ is_u) +
     ggtitle("Posterior standard deviations")
-  
+
   ggplot(
     filter(results, metric == "sd", par == "u") %>%
       dcast(par + component + group ~ method, value.var="val")

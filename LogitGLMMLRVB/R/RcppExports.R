@@ -57,8 +57,8 @@ GetFullModelLogPriorDerivatives <- function(r_vp, r_pp, r_opt) {
     .Call('LogitGLMMLRVB_GetFullModelLogPriorDerivatives', PACKAGE = 'LogitGLMMLRVB', r_vp, r_pp, r_opt)
 }
 
-GetLogVariationalDensityDerivatives <- function(r_obs, r_vp, r_opt) {
-    .Call('LogitGLMMLRVB_GetLogVariationalDensityDerivatives', PACKAGE = 'LogitGLMMLRVB', r_obs, r_vp, r_opt)
+GetLogVariationalDensityDerivatives <- function(r_obs, r_vp, r_opt, global_only, include_beta, include_mu, include_tau) {
+    .Call('LogitGLMMLRVB_GetLogVariationalDensityDerivatives', PACKAGE = 'LogitGLMMLRVB', r_obs, r_vp, r_opt, global_only, include_beta, include_mu, include_tau)
 }
 
 GetMCMCLogPriorDerivatives <- function(draw_list, r_pp, r_opt) {

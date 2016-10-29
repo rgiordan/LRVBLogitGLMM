@@ -185,15 +185,19 @@ BEGIN_RCPP
 END_RCPP
 }
 // GetLogVariationalDensityDerivatives
-Rcpp::List GetLogVariationalDensityDerivatives(const Rcpp::List r_obs, const Rcpp::List r_vp, const Rcpp::List r_opt);
-RcppExport SEXP LogitGLMMLRVB_GetLogVariationalDensityDerivatives(SEXP r_obsSEXP, SEXP r_vpSEXP, SEXP r_optSEXP) {
+Rcpp::List GetLogVariationalDensityDerivatives(const Rcpp::List r_obs, const Rcpp::List r_vp, const Rcpp::List r_opt, bool global_only, bool include_beta, bool include_mu, bool include_tau);
+RcppExport SEXP LogitGLMMLRVB_GetLogVariationalDensityDerivatives(SEXP r_obsSEXP, SEXP r_vpSEXP, SEXP r_optSEXP, SEXP global_onlySEXP, SEXP include_betaSEXP, SEXP include_muSEXP, SEXP include_tauSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Rcpp::List >::type r_obs(r_obsSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List >::type r_vp(r_vpSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List >::type r_opt(r_optSEXP);
-    rcpp_result_gen = Rcpp::wrap(GetLogVariationalDensityDerivatives(r_obs, r_vp, r_opt));
+    Rcpp::traits::input_parameter< bool >::type global_only(global_onlySEXP);
+    Rcpp::traits::input_parameter< bool >::type include_beta(include_betaSEXP);
+    Rcpp::traits::input_parameter< bool >::type include_mu(include_muSEXP);
+    Rcpp::traits::input_parameter< bool >::type include_tau(include_tauSEXP);
+    rcpp_result_gen = Rcpp::wrap(GetLogVariationalDensityDerivatives(r_obs, r_vp, r_opt, global_only, include_beta, include_mu, include_tau));
     return rcpp_result_gen;
 END_RCPP
 }

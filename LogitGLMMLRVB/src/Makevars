@@ -1,13 +1,13 @@
 ## -*- mode: makefile; -*-
 
 PKG_CXXFLAGS=\
--I /home/rgiordan/Documents/git_repos/variational_bayes/logit_glmm/include \
--I /home/rgiordan/Documents/git_repos/LinearResponseVariationalBayes.cpp/include \
+-I $(GIT_REPO_LOC)/LRVBLogitGLMM/include \
+-I $(GIT_REPO_LOC)/LinearResponseVariationalBayes.cpp/include \
 -I /home/rgiordan/R/x86_64-pc-linux-gnu-library/3.2/RcppEigen/include \
--I /home/rgiordan/Documents/git_repos/math/ \
--I /home/rgiordan/Documents/git_repos/math/lib/boost_1.60.0/boost/math/special_functions \
--I /home/rgiordan/Documents/git_repos/math/lib/boost_1.60.0/boost/math/tools \
--I /home/rgiordan/Documents/git_repos/math/lib/boost_1.60.0/
+-I $(GIT_REPO_LOC)/math/ \
+-I $(GIT_REPO_LOC)/math/lib/boost_1.60.0/boost/math/special_functions \
+-I $(GIT_REPO_LOC)/math/lib/boost_1.60.0/boost/math/tools \
+-I $(GIT_REPO_LOC)/math/lib/boost_1.60.0/
 
 PKG_LIBS= -lLogitGLMMLRVB -lLinearResponseVariationalBayes
 

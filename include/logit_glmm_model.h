@@ -384,6 +384,7 @@ struct VariationalLogDensityFunctor {
     VariationalMomentParameters<double> obs;
     VariationalNaturalParameters<double> base_vp;
 
+    bool global_only;
     bool include_beta;
     bool include_mu;
     bool include_tau;
@@ -396,6 +397,7 @@ struct VariationalLogDensityFunctor {
         base_vp = VariationalNaturalParameters<double>(vp);
         obs = VariationalMomentParameters<double>(_obs);
         include_mu = include_beta = include_tau = true;
+        global_only = false;
         include_u_groups = VectorXi::Zero(base_vp.n_groups);
         for (int g = 0; g < base_vp.n_groups; g++) {
           include_u_groups(g) = g;
@@ -404,7 +406,11 @@ struct VariationalLogDensityFunctor {
 
     template <typename T> T operator()(VectorXT<T> const &theta) const {
         VariationalNaturalParameters<T> vp(base_vp);
-        SetFromVector(theta, vp);
+        if (global_only) {
+            SetFromGlobalVector(theta, vp);
+        } else {
+            SetFromVector(theta, vp);
+        }
 
         T q_log_dens = 0.0;
         if (include_beta) {
@@ -422,13 +428,15 @@ struct VariationalLogDensityFunctor {
             q_log_dens += vp.tau.log_lik(tau_obs);
         }
 
-        for (int g_ind = 0; g_ind < include_u_groups.size(); g_ind++) {
-            int g = include_u_groups(g_ind);
-            if (g < 0 || g >= vp.n_groups) {
-                throw std::runtime_error("u_g q log density: g out of bounds.");
+        if (!global_only) {
+            for (int g_ind = 0; g_ind < include_u_groups.size(); g_ind++) {
+                int g = include_u_groups(g_ind);
+                if (g < 0 || g >= vp.n_groups) {
+                    throw std::runtime_error("u_g q log density: g out of bounds.");
+                }
+                T u_g_obs = obs.u[g].e;
+                q_log_dens += vp.u[g].log_lik(u_g_obs);
             }
-            T u_g_obs = obs.u[g].e;
-            q_log_dens += vp.u[g].log_lik(u_g_obs);
         }
 
         return q_log_dens;
@@ -498,7 +506,11 @@ ProblemInstance SimulateData(int n_obs, int k_reg, int n_groups);
 Derivatives GetLogVariationalDensityDerivatives(
     VariationalMomentParameters<double> const &obs,
     VariationalNaturalParameters<double> &vp,
-    ModelOptions const &opt);
+    ModelOptions const &opt,
+    bool global_only,
+    bool include_beta,
+    bool include_mu,
+    bool include_tau);
 
 
 Derivatives GetLogPriorDerivativesFromDraw(

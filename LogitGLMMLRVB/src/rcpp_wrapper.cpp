@@ -450,14 +450,20 @@ Rcpp::List GetFullModelLogPriorDerivatives(
 Rcpp::List GetLogVariationalDensityDerivatives(
     const Rcpp::List r_obs,
     const Rcpp::List r_vp,
-    const Rcpp::List r_opt) {
+    const Rcpp::List r_opt,
+    bool global_only,
+    bool include_beta,
+    bool include_mu,
+    bool include_tau) {
 
     ModelOptions opt = ConvertListToOption(r_opt);
     VariationalNaturalParameters<double> vp =
         ConvertNaturalParametersFromList(r_vp);
     VariationalMomentParameters<double> obs =
         ConvertMomentParametersFromList(r_obs);
-    Derivatives derivs = GetLogVariationalDensityDerivatives(obs, vp, opt);
+    Derivatives derivs =
+        GetLogVariationalDensityDerivatives(obs, vp, opt, global_only,
+            include_beta, include_mu, include_tau);
     return ConvertDerivativesToList(derivs, opt);
 };
 
