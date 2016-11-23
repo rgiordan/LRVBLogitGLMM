@@ -252,7 +252,7 @@ struct ExpectedLogLikelihoodFunctor {
 };
 
 
-// The expected log prior
+// The expected log prior as a function of the variational parameters.
 struct ExpectedLogPriorFunctor {
   VariationalNaturalParameters<double> base_vp;
   PriorParameters<double> base_pp;

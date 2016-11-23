@@ -71,6 +71,7 @@ if (file.exists(model_file_rdata)) {
   print("Loading pre-compiled Stan model.")
   load(model_file_rdata)
 } else {
+  # Run this to force re-compilation of the model.
   print("Compiling Stan model.")
   model_file <- file.path(stan_directory, paste(stan_model_name, "stan", sep="."))
   model <- stan_model(model_file)
@@ -89,32 +90,43 @@ stan_dat <- list(NG = n_groups,
                  beta_prior_var = solve(pp$beta_info),
                  mu_prior_mean = pp$mu_loc,
                  mu_prior_var = 1 / pp$mu_info,
+                 mu_prior_t = 1,
+                 mu_prior_epsilon = 0,
                  tau_prior_alpha = pp$tau_alpha,
                  tau_prior_beta = pp$tau_beta)
 
 # Some knobs we can tweak.  Note that we need many iterations to accurately assess
 # the prior sensitivity in the MCMC noise.
-chains <- 1
-iters <- 2000
-control <- list(adapt_t0 = 10,       # default = 10
-                stepsize = 1,        # default = 1
-                max_treedepth = 6)   # default = 10
+iters <- 500
 seed <- 42
 
 # Draw the draws and save.
 mcmc_time <- Sys.time()
-stan_sim <- sampling(model, data = stan_dat, seed = seed,
-                     chains = chains, iter = iters, control = control)
+stan_sim <- sampling(model, data=stan_dat, seed=seed, iter=iters)
 mcmc_time <- Sys.time() - mcmc_time
+
+# Sample with a few values of epsilon.
+stan_dat_eps1 <- stan_dat
+stan_dat_eps1$epsilon <- 1
+stan_sim_eps1 <- sampling(model, data=stan_dat_eps1, seed=seed, iter=iters)
+
+# Sample with a few values of epsilon.
+stan_dat_eps0_1 <- stan_dat
+stan_dat_eps0_1$epsilon <- 0.1
+stan_sim_eps0_1 <- sampling(model, data=stan_dat_eps0_1, seed=seed, iter=iters)
+
+# Sample with advi
+stan_advi <- vb(model, data=stan_dat,  algorithm="meanfield", output_samples=iters)
+# stan_advi_full <- vb(model, data=stan_dat,  algorithm="fullrank", output_samples=iters) # This is the same. :(
 
 data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
 stan_draws_file <- file.path(data_directory, paste(analysis_name, "_mcmc_draws.Rdata", sep=""))
-save(stan_sim, mcmc_time, stan_dat, true_params, pp, file=stan_draws_file)
+save(stan_sim, mcmc_time, stan_dat,
+     stan_dat_eps1, stan_sim_eps1, 
+     stan_dat_eps0_1, stan_sim_eps0_1,
+     stan_advi,
+     true_params, pp, file=stan_draws_file)
 
-# stan_advi <- vb(model, data = stan_dat,  algorithm="meanfield", output_samples=iters)
-# stan_advi_full <- vb(model, data = stan_dat,  algorithm="fullrank", output_samples=iters)
-# 
-# save(stan_sim, mcmc_time, stan_dat, true_params, pp,
-#      stan_advi,stan_advi_full, file=stan_draws_file)
-# 
+
+
 

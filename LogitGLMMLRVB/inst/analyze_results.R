@@ -8,6 +8,7 @@ library(trust)
 
 library(LRVBUtils)
 
+library(gridExtra)
 
 project_directory <-
   file.path(Sys.getenv("GIT_REPO_LOC"), "LRVBLogitGLMM")
@@ -86,6 +87,7 @@ GetBetaLogDensity <- function(beta, vp_opt, draw, pp, unconstrained, calculate_g
   return(q_derivs)
 }
 
+
 # You could also do this more numerically stably with a Cholesky decomposition.
 lrvb_pre_factor <- -1 * lrvb_results$jac %*% solve(lrvb_results$elbo_hess)
 
@@ -96,6 +98,7 @@ u_cov <- (1.5 ^ 2) * solve(vp_opt$beta_info)
 GetULogDensity <- function(beta) {
   dmvnorm(beta, mean=u_mean, sigma=u_cov, log=TRUE)
 }
+
 
 DrawU <- function(n_samples) {
   rmvnorm(n_samples, mean=u_mean, sigma=u_cov)
@@ -127,7 +130,6 @@ GetInfluenceFunctionSample <- GetInfluenceFunctionSampleFunction(
 
 GetInfluenceFunctionSample(u_draws[1, ])
 
-Rprof("/tmp/rprof")
 influence_list <- list()
 pb <- txtProgressBar(min=1, max=nrow(u_draws), style=3)
 for (ind in 1:nrow(u_draws)) {
@@ -135,24 +137,59 @@ for (ind in 1:nrow(u_draws)) {
   influence_list[[ind]] <- GetInfluenceFunctionSample(u_draws[ind, ])
 }
 close(pb)
-summaryRprof("/tmp/rprof")
-
-
 
 
 names(influence_list[[1]])
 influence_vector_list <- lapply(influence_list, function(x) as.numeric(x$influence_function))
 influence_matrix <- do.call(rbind, influence_vector_list)
 
-ind <- pp_indices$beta_loc[1]; param_name <- "beta1" 
-influence_df <-
-  data.frame(beta1=u_draws[, 1], beta2=u_draws[, 2], influence=influence_matrix[, ind], param_name=param_name)
+mp_opt_vector <- GetMomentParameterVector(mp_opt, FALSE)
+GetIndexRow <- function(ind, param_name) {
+  data.frame(ind=ind, param_name=param_name, val=mp_opt_vector[ind])
+}
+inds  <- data.frame()
+inds <- rbind(inds, GetIndexRow(mp_indices$beta_e_vec[1], param_name <- "E_beta1"))
+inds <- rbind(inds, GetIndexRow(mp_indices$beta_e_vec[2], param_name <- "E_beta2"))
+inds <- rbind(inds, GetIndexRow(mp_indices$beta_e_outer[1, 1], param_name <- "E_beta1_beta1"))
 
-ggplot(influence_df) +
-  geom_point(aes(x=beta1, y=beta2, color=influence), alpha=0.2) +
-  geom_point(aes(x=mp_opt$beta_e_vec[1], y=mp_opt$beta_e_vec[2]), color="red", size=2) +
-  ggtitle(paste("Influence of beta prior on ", param_name)) +
-  scale_color_gradient2()
+
+GetInfluenceDataFrame <- function(ind, param_name, val) {
+  data.frame(draw=1:nrow(u_draws), beta1=u_draws[, 1], beta2=u_draws[, 2],
+             influence=influence_matrix[, ind], param_name=param_name, val=val)
+}
+
+influence_df <- data.frame()
+for (n in 1:nrow(inds)) {
+  influence_df <- rbind(influence_df, GetInfluenceDataFrame(inds[n, "ind"], inds[n, "param_name"], inds[n, "val"]))
+}
+
+influence_cast <-
+  melt(influence_df, id.vars=c("draw", "beta1", "beta2", "param_name")) %>%
+  dcast(draw + beta1 + beta2 ~ param_name + variable) %>%
+  mutate(var_beta1_influence = E_beta1_beta1_influence - 2 * E_beta1_val * E_beta1_influence)
+
+if (FALSE) {
+  p1 <- ggplot(influence_cast) +
+    geom_point(aes(x=beta1, y=beta2, color=var_beta1_influence), alpha=0.2) +
+    geom_point(aes(x=mp_opt$beta_e_vec[1], y=mp_opt$beta_e_vec[2]), color="red", size=2) +
+    ggtitle(paste("Influence of beta prior on beta1 variance")) +
+    scale_color_gradient2()
+  p2 <- ggplot(influence_cast) +
+    geom_point(aes(x=beta1, y=beta2, color=E_beta1_beta1_influence), alpha=0.2) +
+    geom_point(aes(x=mp_opt$beta_e_vec[1], y=mp_opt$beta_e_vec[2]), color="red", size=2) +
+    ggtitle(paste("Influence of beta prior on beta1 beta1")) +
+    scale_color_gradient2()
+  p3 <- ggplot(influence_cast) +
+    geom_point(aes(x=beta1, y=beta2, color=E_beta1_influence), alpha=0.2) +
+    geom_point(aes(x=mp_opt$beta_e_vec[1], y=mp_opt$beta_e_vec[2]), color="red", size=2) +
+    ggtitle(paste("Influence of beta prior on beta1")) +
+    scale_color_gradient2()
+  grid.arrange(p1, p2, p3, nrow=1)
+}
+
+
+
+
 
 
 #############################

@@ -1,0 +1,15 @@
+data {
+    real x;
+}
+parameters {
+    real mu;
+}
+transformed parameters {
+    real mu_lpdf;
+    //mu_lpdf = normal_lpdf(mu | 0, 1);
+    mu_lpdf = 2.0;
+}
+model {
+    target += mu_lpdf;
+    //target += normal_lpdf(mu | 0, 1);
+}

@@ -361,7 +361,6 @@ public:
 
     return theta;
   }
-
 };
 
 
