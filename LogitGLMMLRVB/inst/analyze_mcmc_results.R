@@ -40,11 +40,20 @@ SummarizeResults <- function(stan_sim, method) {
 
 
 result <- rbind(
-  SummarizeResults(stan_results$stan_sim, "normal"),
-  SummarizeResults(stan_results$stan_sim_eps0_1, "eps0_1"),
-  SummarizeResults(stan_results$stan_sim_eps1, "eps1"),
-  SummarizeResults(stan_results$stan_advi, "advi")
+  SummarizeResults(stan_results$stan_sim, "normal") %>% mutate(epsilon=0),
+  SummarizeResults(stan_results$stan_sim_eps0_1, "eps0_1") %>% mutate(epsilon=0.1),
+  SummarizeResults(stan_results$stan_sim_eps1, "eps1") %>% mutate(epsilon=1)
 )
 
 
 dcast(result, par + component ~ metric + method, value.var="val")
+
+stan_sim <- extract(stan_results$stan_sim)
+plot(stan_sim$mu_normal_lpdf, stan_sim$mu_normal_c_lpdf)
+
+weights <- exp(stan_sim$mu_normal_c_lpdf - stan_sim$mu_normal_lpdf)
+weights <- length(weights) * weights / sum(weights)
+hist(weights, 100)
+
+ggplot(filter(result, metric=="mean", par=="mu")) +
+  geom_point(aes(x=epsilon, y=val, color=par))

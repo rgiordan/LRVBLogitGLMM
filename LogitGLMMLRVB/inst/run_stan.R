@@ -90,6 +90,8 @@ stan_dat <- list(NG = n_groups,
                  beta_prior_var = solve(pp$beta_info),
                  mu_prior_mean = pp$mu_loc,
                  mu_prior_var = 1 / pp$mu_info,
+                 mu_prior_mean_c = pp$mu_loc,
+                 mu_prior_var_c = 2 / pp$mu_info,
                  mu_prior_t = 1,
                  mu_prior_epsilon = 0,
                  tau_prior_alpha = pp$tau_alpha,
@@ -102,17 +104,22 @@ seed <- 42
 
 # Draw the draws and save.
 mcmc_time <- Sys.time()
+stan_dat$mu_prior_epsilon <- 0
 stan_sim <- sampling(model, data=stan_dat, seed=seed, iter=iters)
 mcmc_time <- Sys.time() - mcmc_time
 
 # Sample with a few values of epsilon.
 stan_dat_eps1 <- stan_dat
-stan_dat_eps1$epsilon <- 1
+stan_dat_eps1$mu_prior_epsilon <- 1
 stan_sim_eps1 <- sampling(model, data=stan_dat_eps1, seed=seed, iter=iters)
+
+# Ensure a difference.
+print(stan_sim, c("mu", "beta"))
+print(stan_sim_eps1, c("mu", "beta"))
 
 # Sample with a few values of epsilon.
 stan_dat_eps0_1 <- stan_dat
-stan_dat_eps0_1$epsilon <- 0.1
+stan_dat_eps0_1$mu_prior_epsilon <- 0.1
 stan_sim_eps0_1 <- sampling(model, data=stan_dat_eps0_1, seed=seed, iter=iters)
 
 # Sample with advi

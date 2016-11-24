@@ -19,6 +19,8 @@ data {
   
   // An alternative prior for the mu prior distribution.
   real <lower=0, upper=1> mu_prior_epsilon;
+  real mu_prior_mean_c;
+  real <lower=0> mu_prior_var_c;
   real <lower=0> mu_prior_t;
 }
 
@@ -47,9 +49,11 @@ transformed parameters {
   //   p[n] = inv_logit(logit_p[n]);
   // }
   real mu_normal_lpdf;
+  real mu_normal_c_lpdf;
   real mu_student_t_lpdf;
 
   mu_normal_lpdf = normal_lpdf(mu | mu_prior_mean, mu_prior_var);
+  mu_normal_c_lpdf = normal_lpdf(mu | mu_prior_mean_c, mu_prior_var_c);
   mu_student_t_lpdf = student_t_lpdf(mu | mu_prior_t, mu_prior_mean, sqrt(mu_prior_var));
 }
 
@@ -62,14 +66,17 @@ model {
   if (mu_prior_epsilon == 0) {
     mu ~ normal(mu_prior_mean, mu_prior_var);
   } else if (mu_prior_epsilon == 1) {
-    mu ~ student_t(mu_prior_t, mu_prior_mean, sqrt(mu_prior_var));
+    mu ~ normal(mu_prior_mean_c, mu_prior_var_c);
+    // mu ~ student_t(mu_prior_t, mu_prior_mean, sqrt(mu_prior_var));
   } else {
     // It is a mixture.
     // Why doesn't this work?  See https://groups.google.com/forum/#!category-topic/stan-users/general/_gOPDicnDl0
     //target += log_sum_exp(log(1 - mu_prior_epsilon) + mu_normal_lpdf,
     //                      log(mu_prior_epsilon) + mu_student_t_lpdf);
-    target += log_sum_exp(log(1 - mu_prior_epsilon) + normal_lpdf(mu | mu_prior_mean, mu_prior_var),
-                          log(mu_prior_epsilon) + student_t_lpdf(mu | mu_prior_t, mu_prior_mean, sqrt(mu_prior_var)));
+    // target += log_sum_exp(log(1 - mu_prior_epsilon) + normal_lpdf(mu | mu_prior_mean, mu_prior_var),
+    //                       log(mu_prior_epsilon) + student_t_lpdf(mu | mu_prior_t, mu_prior_mean, sqrt(mu_prior_var)));
+    target += log_sum_exp(log(1 - mu_prior_epsilon) + normal_lpdf(mu | mu_prior_mean, mu_prior_var_c),
+                          log(mu_prior_epsilon) + normal_lpdf(mu | mu_prior_mean, mu_prior_var_c));
   }
   
   // The model
