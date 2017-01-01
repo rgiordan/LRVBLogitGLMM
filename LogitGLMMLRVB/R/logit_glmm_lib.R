@@ -213,17 +213,52 @@ SummarizeMCMCColumn <- function(draws, par, component=-1, group=-1, method="mcmc
         ResultRow(par, component, group, method=method, metric="sd", val=sd(draws)))
 }
 
-# The Accessor function should take a vb list and return the appropriate component.
-SummarizeVBVariable <- function(vp_mom, mfvb_sd, lrvb_sd, Accessor, par, component=-1, group=-1) {
-  rbind(ResultRow(par, component, group, method="mfvb", metric="mean", val=Accessor(vp_mom)),
-        ResultRow(par, component, group, method="mfvb", metric="sd", val=Accessor(mfvb_sd)),
-        ResultRow(par, component, group, method="lrvb", metric="sd", val=Accessor(lrvb_sd)))
+
+SummarizeVBVariableMetric <- function(vp_mom_list, method, metric, Accessor, par, component=-1, group=-1) {
+  return(ResultRow(par, component, group, method=method, metric=metric, val=Accessor(vp_mom_list)))
+}
+
+
+# # The Accessor function should take a vb list and return the appropriate component.
+# SummarizeVBVariable <- function(vp_mom, mfvb_sd, lrvb_sd, Accessor, par, component=-1, group=-1) {
+#   rbind(SummarizeVBVariableMetric(vp_mom, method="mfvb", metric="mean",
+#                                   Accessor=Accessor, par=par, component=component, group=group),
+#         SummarizeVBVariableMetric(mfvb_sd, method="mfvb", metric="sd",
+#                                   Accessor=Accessor, par=par, component=component, group=group),
+#         SummarizeVBVariableMetric(lrvb_sd, method="lrvb", metric="sd",
+#                                   Accessor=Accessor, par=par, component=component, group=group))
+# }
+
+
+# VB results for a particular method and metric.  vp_mom only needs to be a list with some metric meaninful
+# for the VB moment parameters.
+SummarizeVBResults <- function(vp_mom, method, metric) {
+  k_reg <- vp_mom$k_reg
+  n_groups <- vp_mom$n_groups
+  
+  results_list <- list()
+  
+  results_list[[length(results_list) + 1]] <-
+    SummarizeVBVariableMetric(vp_mom, method=method, metric=metric, function(vp) { vp[["mu_e"]] }, par="mu")
+  results_list[[length(results_list) + 1]] <-
+    SummarizeVBVariableMetric(vp_mom,method=method, metric=metric, function(vp) { vp[["tau_e"]] }, par="tau")
+  for (k in 1:k_reg) {
+    results_list[[length(results_list) + 1]] <-
+      SummarizeVBVariableMetric(vp_mom, method=method, metric=metric, function(vp) { vp[["beta_e_vec"]][k] },
+                                par="beta", component=k)
+  }
+  for (g in 1:n_groups) {
+    results_list[[length(results_list) + 1]] <-
+      SummarizeVBVariableMetric(vp_mom, method=method, metric=metric, function(vp) { vp[["u"]][[g]][["u_e"]] },
+                                par="u", group=g)
+  }
+
+  return(do.call(rbind, results_list))
 }
 
 
 
 SummarizeResults <- function(mcmc_sample, vp_mom, mfvb_sd, lrvb_sd) {
-
   k_reg <- vp_mom$k_reg
   n_groups <- vp_mom$n_groups
 
@@ -240,22 +275,9 @@ SummarizeResults <- function(mcmc_sample, vp_mom, mfvb_sd, lrvb_sd) {
       SummarizeMCMCColumn(mcmc_sample$u[, g], par="u", group=g)
   }
 
-
-  # VB results
-  results_list[[length(results_list) + 1]] <-
-    SummarizeVBVariable(vp_mom, mfvb_sd, lrvb_sd, function(vp) { vp[["mu_e"]] }, par="mu")
-  results_list[[length(results_list) + 1]] <-
-    SummarizeVBVariable(vp_mom, mfvb_sd, lrvb_sd, function(vp) { vp[["tau_e"]] }, par="tau")
-  for (k in 1:k_reg) {
-    results_list[[length(results_list) + 1]] <-
-      SummarizeVBVariable(vp_mom, mfvb_sd, lrvb_sd, function(vp) { vp[["beta_e_vec"]][k] },
-                          par="beta", component=k)
-  }
-  for (g in 1:n_groups) {
-    results_list[[length(results_list) + 1]] <-
-      SummarizeVBVariable(vp_mom, mfvb_sd, lrvb_sd, function(vp) { vp[["u"]][[g]][["u_e"]] },
-                          par="u", group=g)
-  }
-
+  results_list[[length(results_list) + 1]] <- SummarizeVBResults(vp_mom, method="mfvb", metric="mean")
+  results_list[[length(results_list) + 1]] <- SummarizeVBResults(mfvb_sd, method="mfvb", metric="sd")
+  results_list[[length(results_list) + 1]] <- SummarizeVBResults(lrvb_sd, method="lrvb", metric="sd")
+  
   return(do.call(rbind, results_list))
 }

@@ -19,6 +19,11 @@ analysis_name <- "simulated_data"
 data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
 vb_results_file <- file.path(data_directory, paste(analysis_name, "_vb_results.Rdata", sep=""))
 
+# If true, save the results to a file readable by knitr.
+save_results <- TRUE
+results_file <- file.path(data_directory,
+                          paste(analysis_name, "sensitivity.Rdata", sep="_"))
+
 vb_results <- LoadIntoEnvironment(vb_results_file)
 
 vp_opt <- vb_results$vp_opt
@@ -53,6 +58,37 @@ log_prior_derivs <- GetFullModelLogPriorDerivatives(vp_opt, pp, opt)
 log_prior_param_prior <- Matrix(log_prior_derivs$hess[comb_vp_ind, comb_prior_ind])
 
 prior_sens <- -1 * lrvb_results$jac %*% Matrix::solve(lrvb_results$elbo_hess, log_prior_param_prior)#
+
+GetPriorSensitivityResult <- function(sens_vec, prior_par, k1=-1, k2=-1) {
+  sens_mp <-  GetMomentParametersFromVector(mp_opt, sens_vec, FALSE)
+  sens_df <- SummarizeVBResults(sens_mp, method="lrvb", metric="sensitivity")
+  return(cbind(sens_df, data.frame(prior_par=prior_par, k1=k1, k2=k2)))
+}
+
+
+# Pack prior results into a list.
+result_list <- list()
+for (k_ind in 1:pp_indices$k_reg) {
+  sens_vec <- prior_sens[, pp_indices$beta_loc[k_ind]]
+  result_list[[length(result_list) + 1]] <- GetPriorSensitivityResult(sens_vec, "beta_loc", k1=k_ind)
+}
+for (k_ind1 in 1:pp_indices$k_reg) { for (k_ind2 in 1:k_ind1) {
+  sens_vec <- prior_sens[, pp_indices$beta_info[k_ind1, k_ind2]]
+  result_list[[length(result_list) + 1]] <- GetPriorSensitivityResult(sens_vec, "beta_info", k1=k_ind1, k2=k_ind2)
+}}
+result_list[[length(result_list) + 1]] <- GetPriorSensitivityResult(prior_sens[, pp_indices$mu_loc], "mu_loc")
+result_list[[length(result_list) + 1]] <- GetPriorSensitivityResult(prior_sens[, pp_indices$mu_info], "mu_info")
+result_list[[length(result_list) + 1]] <- GetPriorSensitivityResult(prior_sens[, pp_indices$tau_alpha], "tau_alpha")
+result_list[[length(result_list) + 1]] <- GetPriorSensitivityResult(prior_sens[, pp_indices$tau_beta], "tau_beta")
+prior_sens_df <- do.call(rbind, result_list)
+
+
+
+# Get the MCMC covariance-based results
+mcmc_draws <- extract(vb_results$stan_results$stan_sim)
+mcmc_mp <- PackMCMCSamplesIntoMoments(mcmc_draws, mp_opt)
+
+
 
 
 ##################
@@ -203,6 +239,11 @@ lrvb_sd <- GetMomentParametersFromVector(vp_mom, sqrt(diag(lrvb_cov)), FALSE)
 mfvb_sd <- GetMomentParametersFromVector(vp_mom, sqrt(diag(mfvb_cov)), FALSE)
 
 results <- SummarizeResults(mcmc_sample, vp_mom, mfvb_sd, lrvb_sd)
+
+if (save_results) {
+  influence_cast_sub <- sample_n(influence_cast, 5000)
+  save(results, influence_cast_sub, file=results_file)
+}
 
 if (FALSE) {
   ggplot(
