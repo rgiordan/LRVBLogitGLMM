@@ -78,8 +78,8 @@ prior_sens_cast <- dcast(
   prior_sens_df, par + component + group + prior_par + k1 + k2 + metric ~ method, value.var="val")
 
 if (FALSE) {
-  ggplot(filter(prior_sens_cast)) +
-    geom_point(aes(x=mcmc, y=lrvb, color=par)) +
+  ggplot(filter(prior_sens_cast, par != "u")) +
+    geom_point(aes(x=mcmc_norm, y=lrvb_norm, color=par)) +
     geom_abline(aes(intercept=0, slope=1))
 
   p1 <- ggplot(filter(prior_sens_cast, par=="u")) +
@@ -246,7 +246,7 @@ results <- SummarizeResults(mcmc_sample, vp_mom, mfvb_sd, lrvb_sd)
 
 if (save_results) {
   influence_cast_sub <- sample_n(influence_cast, 5000)
-  save(results, influence_cast_sub, prior_sens_cast, file=results_file)
+  save(results, influence_cast_sub, prior_sens_cast, mp_opt, file=results_file)
 }
 
 if (FALSE) {

@@ -19,6 +19,135 @@ typedef Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> matrix_d;
 
 static int current_statement_begin__;
 
+template <typename T0__, typename T1__, typename T2__, typename T3__, typename T4__, typename T5__>
+inline
+typename boost::math::tools::promote_args<T0__, T1__, T2__, T3__, typename boost::math::tools::promote_args<T4__, T5__>::type>::type
+mu_log_prior(const T0__& mu,
+                 const T1__& mu_prior_epsilon,
+                 const T2__& mu_prior_mean,
+                 const T3__& mu_prior_var,
+                 const T4__& mu_prior_mean_c,
+                 const T5__& mu_prior_var_c, std::ostream* pstream__) {
+    typedef typename boost::math::tools::promote_args<T0__, T1__, T2__, T3__, typename boost::math::tools::promote_args<T4__, T5__>::type>::type fun_scalar_t__;
+    typedef fun_scalar_t__ fun_return_scalar_t__;
+    const static bool propto__ = true;
+    (void) propto__;
+    int current_statement_begin__ = -1;
+    try {
+        {
+            fun_scalar_t__ mu_log_pdf;
+            (void) mu_log_pdf;  // dummy to suppress unused var warning
+            fun_scalar_t__ mu_normal_lpdf_cache;
+            (void) mu_normal_lpdf_cache;  // dummy to suppress unused var warning
+            fun_scalar_t__ mu_normal_c_lpdf_cache;
+            (void) mu_normal_c_lpdf_cache;  // dummy to suppress unused var warning
+            stan::math::initialize(mu_log_pdf, std::numeric_limits<double>::quiet_NaN());
+            stan::math::initialize(mu_normal_lpdf_cache, std::numeric_limits<double>::quiet_NaN());
+            stan::math::initialize(mu_normal_c_lpdf_cache, std::numeric_limits<double>::quiet_NaN());
+            current_statement_begin__ = 12;
+            stan::math::assign(mu_normal_lpdf_cache, normal_log(mu,mu_prior_mean,mu_prior_var));
+            current_statement_begin__ = 13;
+            stan::math::assign(mu_normal_c_lpdf_cache, normal_log(mu,mu_prior_mean_c,mu_prior_var_c));
+            current_statement_begin__ = 17;
+            if (as_bool(logical_eq(mu_prior_epsilon,0))) {
+                current_statement_begin__ = 18;
+                stan::math::assign(mu_log_pdf, normal_log(mu,mu_prior_mean,mu_prior_var));
+            } else if (as_bool(logical_eq(mu_prior_epsilon,1))) {
+                current_statement_begin__ = 20;
+                stan::math::assign(mu_log_pdf, normal_log(mu,mu_prior_mean_c,mu_prior_var_c));
+            } else {
+                current_statement_begin__ = 24;
+                stan::math::assign(mu_log_pdf, log_sum_exp((log((1 - mu_prior_epsilon)) + mu_normal_lpdf_cache),(log(mu_prior_epsilon) + mu_normal_c_lpdf_cache)));
+            }
+            current_statement_begin__ = 27;
+            return stan::math::promote_scalar<fun_return_scalar_t__>(mu_log_pdf);
+        }
+    } catch (const std::exception& e) {
+        stan::lang::rethrow_located(e,current_statement_begin__);
+        // Next line prevents compiler griping about no return
+        throw std::runtime_error("*** IF YOU SEE THIS, PLEASE REPORT A BUG ***");
+    }
+}
+
+
+struct mu_log_prior_functor__ {
+    template <typename T0__, typename T1__, typename T2__, typename T3__, typename T4__, typename T5__>
+    inline
+    typename boost::math::tools::promote_args<T0__, T1__, T2__, T3__, typename boost::math::tools::promote_args<T4__, T5__>::type>::type
+    operator()(const T0__& mu,
+                 const T1__& mu_prior_epsilon,
+                 const T2__& mu_prior_mean,
+                 const T3__& mu_prior_var,
+                 const T4__& mu_prior_mean_c,
+                 const T5__& mu_prior_var_c, std::ostream* pstream__) const {
+        return mu_log_prior(mu, mu_prior_epsilon, mu_prior_mean, mu_prior_var, mu_prior_mean_c, mu_prior_var_c, pstream__);
+    }
+};
+
+template <typename T0__, typename T1__, typename T2__, typename T3__, typename T4__, typename T5__, typename T6__, typename T7__, typename T8__, typename T9__, typename T10__, typename T11__>
+inline
+typename boost::math::tools::promote_args<T0__, T1__, T2__, T3__, typename boost::math::tools::promote_args<T4__, T5__, T6__, T7__, typename boost::math::tools::promote_args<T8__, T9__, T10__, T11__>::type>::type>::type
+log_prior(const T0__& tau,
+              const Eigen::Matrix<T1__, Eigen::Dynamic,1>& beta,
+              const T2__& mu,
+              const Eigen::Matrix<T3__, Eigen::Dynamic,1>& beta_prior_mean,
+              const Eigen::Matrix<T4__, Eigen::Dynamic,Eigen::Dynamic>& beta_prior_var,
+              const T5__& tau_prior_alpha,
+              const T6__& tau_prior_beta,
+              const T7__& mu_prior_epsilon,
+              const T8__& mu_prior_mean,
+              const T9__& mu_prior_var,
+              const T10__& mu_prior_mean_c,
+              const T11__& mu_prior_var_c, std::ostream* pstream__) {
+    typedef typename boost::math::tools::promote_args<T0__, T1__, T2__, T3__, typename boost::math::tools::promote_args<T4__, T5__, T6__, T7__, typename boost::math::tools::promote_args<T8__, T9__, T10__, T11__>::type>::type>::type fun_scalar_t__;
+    typedef fun_scalar_t__ fun_return_scalar_t__;
+    const static bool propto__ = true;
+    (void) propto__;
+    int current_statement_begin__ = -1;
+    try {
+        {
+            fun_scalar_t__ log_prior;
+            (void) log_prior;  // dummy to suppress unused var warning
+            stan::math::initialize(log_prior, std::numeric_limits<double>::quiet_NaN());
+            current_statement_begin__ = 37;
+            stan::math::assign(log_prior, 0);
+            current_statement_begin__ = 38;
+            stan::math::assign(log_prior, (log_prior + gamma_log(tau,tau_prior_alpha,tau_prior_beta)));
+            current_statement_begin__ = 39;
+            stan::math::assign(log_prior, (log_prior + multi_normal_log(beta,beta_prior_mean,beta_prior_var)));
+            current_statement_begin__ = 40;
+            stan::math::assign(log_prior, (log_prior + mu_log_prior(mu,mu_prior_epsilon,mu_prior_mean,mu_prior_var,mu_prior_mean_c,mu_prior_var_c, pstream__)));
+            current_statement_begin__ = 43;
+            return stan::math::promote_scalar<fun_return_scalar_t__>(log_prior);
+        }
+    } catch (const std::exception& e) {
+        stan::lang::rethrow_located(e,current_statement_begin__);
+        // Next line prevents compiler griping about no return
+        throw std::runtime_error("*** IF YOU SEE THIS, PLEASE REPORT A BUG ***");
+    }
+}
+
+
+struct log_prior_functor__ {
+    template <typename T0__, typename T1__, typename T2__, typename T3__, typename T4__, typename T5__, typename T6__, typename T7__, typename T8__, typename T9__, typename T10__, typename T11__>
+    inline
+    typename boost::math::tools::promote_args<T0__, T1__, T2__, T3__, typename boost::math::tools::promote_args<T4__, T5__, T6__, T7__, typename boost::math::tools::promote_args<T8__, T9__, T10__, T11__>::type>::type>::type
+    operator()(const T0__& tau,
+              const Eigen::Matrix<T1__, Eigen::Dynamic,1>& beta,
+              const T2__& mu,
+              const Eigen::Matrix<T3__, Eigen::Dynamic,1>& beta_prior_mean,
+              const Eigen::Matrix<T4__, Eigen::Dynamic,Eigen::Dynamic>& beta_prior_var,
+              const T5__& tau_prior_alpha,
+              const T6__& tau_prior_beta,
+              const T7__& mu_prior_epsilon,
+              const T8__& mu_prior_mean,
+              const T9__& mu_prior_var,
+              const T10__& mu_prior_mean_c,
+              const T11__& mu_prior_var_c, std::ostream* pstream__) const {
+        return log_prior(tau, beta, mu, beta_prior_mean, beta_prior_var, tau_prior_alpha, tau_prior_beta, mu_prior_epsilon, mu_prior_mean, mu_prior_var, mu_prior_mean_c, mu_prior_var_c, pstream__);
+    }
+};
+
 class logit_glmm_model : public prob_grad {
 private:
     int NG;
@@ -34,6 +163,8 @@ private:
     double tau_prior_alpha;
     double tau_prior_beta;
     double mu_prior_epsilon;
+    double mu_prior_mean_c;
+    double mu_prior_var_c;
     double mu_prior_t;
 public:
     logit_glmm_model(stan::io::var_context& context__,
@@ -157,6 +288,16 @@ public:
         vals_r__ = context__.vals_r("mu_prior_epsilon");
         pos__ = 0;
         mu_prior_epsilon = vals_r__[pos__++];
+        context__.validate_dims("data initialization", "mu_prior_mean_c", "double", context__.to_vec());
+        mu_prior_mean_c = double(0);
+        vals_r__ = context__.vals_r("mu_prior_mean_c");
+        pos__ = 0;
+        mu_prior_mean_c = vals_r__[pos__++];
+        context__.validate_dims("data initialization", "mu_prior_var_c", "double", context__.to_vec());
+        mu_prior_var_c = double(0);
+        vals_r__ = context__.vals_r("mu_prior_var_c");
+        pos__ = 0;
+        mu_prior_var_c = vals_r__[pos__++];
         context__.validate_dims("data initialization", "mu_prior_t", "double", context__.to_vec());
         mu_prior_t = double(0);
         vals_r__ = context__.vals_r("mu_prior_t");
@@ -176,6 +317,7 @@ public:
         check_greater_or_equal(function__,"tau_prior_beta",tau_prior_beta,0);
         check_greater_or_equal(function__,"mu_prior_epsilon",mu_prior_epsilon,0);
         check_less_or_equal(function__,"mu_prior_epsilon",mu_prior_epsilon,1);
+        check_greater_or_equal(function__,"mu_prior_var_c",mu_prior_var_c,0);
         check_greater_or_equal(function__,"mu_prior_t",mu_prior_t,0);
 
         double DUMMY_VAR__(std::numeric_limits<double>::quiet_NaN());
@@ -329,20 +471,10 @@ public:
 
 
         // transformed parameters
-        T__ mu_normal_lpdf;
-        (void) mu_normal_lpdf;  // dummy to suppress unused var warning
-        T__ mu_student_t_lpdf;
-        (void) mu_student_t_lpdf;  // dummy to suppress unused var warning
 
         // initialize transformed variables to avoid seg fault on val access
-        stan::math::fill(mu_normal_lpdf,DUMMY_VAR__);
-        stan::math::fill(mu_student_t_lpdf,DUMMY_VAR__);
 
         try {
-            current_statement_begin__ = 52;
-            stan::math::assign(mu_normal_lpdf, normal_log(mu,mu_prior_mean,mu_prior_var));
-            current_statement_begin__ = 53;
-            stan::math::assign(mu_student_t_lpdf, student_t_log(mu,mu_prior_t,mu_prior_mean,sqrt(mu_prior_var)));
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e,current_statement_begin__);
             // Next line prevents compiler griping about no return
@@ -350,45 +482,26 @@ public:
         }
 
         // validate transformed parameters
-        if (stan::math::is_uninitialized(mu_normal_lpdf)) {
-            std::stringstream msg__;
-            msg__ << "Undefined transformed parameter: mu_normal_lpdf";
-            throw std::runtime_error(msg__.str());
-        }
-        if (stan::math::is_uninitialized(mu_student_t_lpdf)) {
-            std::stringstream msg__;
-            msg__ << "Undefined transformed parameter: mu_student_t_lpdf";
-            throw std::runtime_error(msg__.str());
-        }
 
         const char* function__ = "validate transformed params";
         (void) function__;  // dummy to suppress unused var warning
 
         // model body
         try {
-            current_statement_begin__ = 58;
+            current_statement_begin__ = 101;
             lp_accum__.add(gamma_log<propto__>(tau, tau_prior_alpha, tau_prior_beta));
-            current_statement_begin__ = 59;
+            current_statement_begin__ = 102;
             lp_accum__.add(multi_normal_log<propto__>(beta, beta_prior_mean, beta_prior_var));
-            current_statement_begin__ = 62;
-            if (as_bool(logical_eq(mu_prior_epsilon,0))) {
-                current_statement_begin__ = 63;
-                lp_accum__.add(normal_log<propto__>(mu, mu_prior_mean, mu_prior_var));
-            } else if (as_bool(logical_eq(mu_prior_epsilon,1))) {
-                current_statement_begin__ = 65;
-                lp_accum__.add(student_t_log<propto__>(mu, mu_prior_t, mu_prior_mean, sqrt(mu_prior_var)));
-            } else {
-                current_statement_begin__ = 71;
-                lp_accum__.add(2);
-            }
-            current_statement_begin__ = 78;
+            current_statement_begin__ = 103;
+            lp_accum__.add(log_prior(tau,beta,mu,beta_prior_mean,beta_prior_var,tau_prior_alpha,tau_prior_beta,mu_prior_epsilon,mu_prior_mean,mu_prior_var,mu_prior_mean_c,mu_prior_var_c, pstream__));
+            current_statement_begin__ = 109;
             for (int g = 1; g <= NG; ++g) {
-                current_statement_begin__ = 79;
+                current_statement_begin__ = 110;
                 lp_accum__.add(normal_log<propto__>(get_base1(u,g,"u",1), mu, (1 / tau)));
             }
-            current_statement_begin__ = 82;
+            current_statement_begin__ = 113;
             for (int n = 1; n <= N; ++n) {
-                current_statement_begin__ = 85;
+                current_statement_begin__ = 116;
                 lp_accum__.add(bernoulli_log<propto__>(get_base1(y,n,"y",1), inv_logit((multiply(transpose(get_base1(x,n,"x",1)),beta) + get_base1(u,(get_base1(y_group,n,"y_group",1) + 1),"u",1)))));
             }
         } catch (const std::exception& e) {
@@ -420,8 +533,6 @@ public:
         names__.push_back("mu");
         names__.push_back("tau");
         names__.push_back("u");
-        names__.push_back("mu_normal_lpdf");
-        names__.push_back("mu_student_t_lpdf");
     }
 
 
@@ -437,10 +548,6 @@ public:
         dimss__.push_back(dims__);
         dims__.resize(0);
         dims__.push_back(NG);
-        dimss__.push_back(dims__);
-        dims__.resize(0);
-        dimss__.push_back(dims__);
-        dims__.resize(0);
         dimss__.push_back(dims__);
     }
 
@@ -476,16 +583,8 @@ public:
         (void) lp__; // dummy call to supress warning
         stan::math::accumulator<double> lp_accum__;
 
-        double mu_normal_lpdf(0.0);
-        (void) mu_normal_lpdf;  // dummy to suppress unused var warning
-        double mu_student_t_lpdf(0.0);
-        (void) mu_student_t_lpdf;  // dummy to suppress unused var warning
 
         try {
-            current_statement_begin__ = 52;
-            stan::math::assign(mu_normal_lpdf, normal_log(mu,mu_prior_mean,mu_prior_var));
-            current_statement_begin__ = 53;
-            stan::math::assign(mu_student_t_lpdf, student_t_log(mu,mu_prior_t,mu_prior_mean,sqrt(mu_prior_var)));
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e,current_statement_begin__);
             // Next line prevents compiler griping about no return
@@ -495,8 +594,6 @@ public:
         // validate transformed parameters
 
         // write transformed parameters
-        vars__.push_back(mu_normal_lpdf);
-        vars__.push_back(mu_student_t_lpdf);
 
         if (!include_gqs__) return;
         // declare and define generated quantities
@@ -564,12 +661,6 @@ public:
         }
 
         if (!include_gqs__ && !include_tparams__) return;
-        param_name_stream__.str(std::string());
-        param_name_stream__ << "mu_normal_lpdf";
-        param_names__.push_back(param_name_stream__.str());
-        param_name_stream__.str(std::string());
-        param_name_stream__ << "mu_student_t_lpdf";
-        param_names__.push_back(param_name_stream__.str());
 
         if (!include_gqs__) return;
     }
@@ -597,12 +688,6 @@ public:
         }
 
         if (!include_gqs__ && !include_tparams__) return;
-        param_name_stream__.str(std::string());
-        param_name_stream__ << "mu_normal_lpdf";
-        param_names__.push_back(param_name_stream__.str());
-        param_name_stream__.str(std::string());
-        param_name_stream__ << "mu_student_t_lpdf";
-        param_names__.push_back(param_name_stream__.str());
 
         if (!include_gqs__) return;
     }
