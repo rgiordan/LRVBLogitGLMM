@@ -281,3 +281,36 @@ SummarizeResults <- function(mcmc_sample, vp_mom, mfvb_sd, lrvb_sd) {
   
   return(do.call(rbind, results_list))
 }
+
+
+
+# Pack prior results into a list.
+GetPriorSensitivityResult <- function(sens_vec, prior_par, method, k1=-1, k2=-1) {
+  sens_mp <-  GetMomentParametersFromVector(mp_opt, sens_vec, FALSE)
+  sens_df <- SummarizeVBResults(sens_mp, method=method, metric="sensitivity")
+  return(cbind(sens_df, data.frame(prior_par=prior_par, k1=k1, k2=k2)))
+}
+
+
+UnpackPriorSensitivityMatrix <- function(prior_sens_mat, pp_indices, method) {
+  result_list <- list()
+  for (k_ind in 1:pp_indices$k_reg) {
+    sens_vec <- prior_sens_mat[, pp_indices$beta_loc[k_ind]]
+    result_list[[length(result_list) + 1]] <- GetPriorSensitivityResult(sens_vec, "beta_loc", method=method, k1=k_ind)
+  }
+  for (k_ind1 in 1:pp_indices$k_reg) { for (k_ind2 in 1:k_ind1) {
+    sens_vec <- prior_sens_mat[, pp_indices$beta_info[k_ind1, k_ind2]]
+    result_list[[length(result_list) + 1]] <- GetPriorSensitivityResult(sens_vec, "beta_info", method=method, k1=k_ind1, k2=k_ind2)
+  }}
+  result_list[[length(result_list) + 1]] <-
+    GetPriorSensitivityResult(prior_sens_mat[, pp_indices$mu_loc], "mu_loc", method=method)
+  result_list[[length(result_list) + 1]] <-
+    GetPriorSensitivityResult(prior_sens_mat[, pp_indices$mu_info], "mu_info", method=method)
+  result_list[[length(result_list) + 1]] <-
+    GetPriorSensitivityResult(prior_sens_mat[, pp_indices$tau_alpha], "tau_alpha", method=method)
+  result_list[[length(result_list) + 1]] <-
+    GetPriorSensitivityResult(prior_sens_mat[, pp_indices$tau_beta], "tau_beta", method=method)
+  return(do.call(rbind, result_list))
+}
+
+

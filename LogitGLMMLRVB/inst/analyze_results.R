@@ -57,38 +57,42 @@ opt$calculate_hessian <- TRUE
 log_prior_derivs <- GetFullModelLogPriorDerivatives(vp_opt, pp, opt)
 log_prior_param_prior <- Matrix(log_prior_derivs$hess[comb_vp_ind, comb_prior_ind])
 
-prior_sens <- -1 * lrvb_results$jac %*% Matrix::solve(lrvb_results$elbo_hess, log_prior_param_prior)#
-
-GetPriorSensitivityResult <- function(sens_vec, prior_par, k1=-1, k2=-1) {
-  sens_mp <-  GetMomentParametersFromVector(mp_opt, sens_vec, FALSE)
-  sens_df <- SummarizeVBResults(sens_mp, method="lrvb", metric="sensitivity")
-  return(cbind(sens_df, data.frame(prior_par=prior_par, k1=k1, k2=k2)))
-}
-
-
-# Pack prior results into a list.
-result_list <- list()
-for (k_ind in 1:pp_indices$k_reg) {
-  sens_vec <- prior_sens[, pp_indices$beta_loc[k_ind]]
-  result_list[[length(result_list) + 1]] <- GetPriorSensitivityResult(sens_vec, "beta_loc", k1=k_ind)
-}
-for (k_ind1 in 1:pp_indices$k_reg) { for (k_ind2 in 1:k_ind1) {
-  sens_vec <- prior_sens[, pp_indices$beta_info[k_ind1, k_ind2]]
-  result_list[[length(result_list) + 1]] <- GetPriorSensitivityResult(sens_vec, "beta_info", k1=k_ind1, k2=k_ind2)
-}}
-result_list[[length(result_list) + 1]] <- GetPriorSensitivityResult(prior_sens[, pp_indices$mu_loc], "mu_loc")
-result_list[[length(result_list) + 1]] <- GetPriorSensitivityResult(prior_sens[, pp_indices$mu_info], "mu_info")
-result_list[[length(result_list) + 1]] <- GetPriorSensitivityResult(prior_sens[, pp_indices$tau_alpha], "tau_alpha")
-result_list[[length(result_list) + 1]] <- GetPriorSensitivityResult(prior_sens[, pp_indices$tau_beta], "tau_beta")
-prior_sens_df <- do.call(rbind, result_list)
-
-
+prior_sens <- -1 * lrvb_results$jac %*% Matrix::solve(lrvb_results$elbo_hess, log_prior_param_prior)
 
 # Get the MCMC covariance-based results
-mcmc_draws <- extract(vb_results$stan_results$stan_sim)
-mcmc_mp <- PackMCMCSamplesIntoMoments(mcmc_draws, mp_opt)
+log_prior_grad_mat <- vb_results$log_prior_grad_mat
+draws_mat <- t(vb_results$draws_mat)
+draws_mat <- draws_mat - rowMeans(draws_mat)
+prior_sens_mcmc <- draws_mat %*% log_prior_grad_mat / nrow(log_prior_grad_mat)
 
+# Combine.
+lrvb_sd_scale <- sqrt(diag(vb_results$lrvb_results$lrvb_cov))
+mcmc_sd_scale <- sqrt(diag(cov(t(draws_mat)))) 
+prior_sens_df <- rbind(
+  UnpackPriorSensitivityMatrix(prior_sens, pp_indices, method="lrvb"),
+  UnpackPriorSensitivityMatrix(prior_sens_mcmc, pp_indices, method="mcmc"),
+  UnpackPriorSensitivityMatrix(prior_sens / lrvb_sd_scale, pp_indices, method="lrvb_norm"),
+  UnpackPriorSensitivityMatrix(prior_sens_mcmc / mcmc_sd_scale, pp_indices, method="mcmc_norm"))
 
+prior_sens_cast <- dcast(
+  prior_sens_df, par + component + group + prior_par + k1 + k2 + metric ~ method, value.var="val")
+
+if (FALSE) {
+  ggplot(filter(prior_sens_cast)) +
+    geom_point(aes(x=mcmc, y=lrvb, color=par)) +
+    geom_abline(aes(intercept=0, slope=1))
+
+  p1 <- ggplot(filter(prior_sens_cast, par=="u")) +
+    geom_point(aes(x=mcmc, y=lrvb, color=prior_par)) +
+    geom_abline(aes(intercept=0, slope=1))
+  
+  p2 <- ggplot(filter(prior_sens_cast, par=="u")) +
+    geom_point(aes(x=mcmc_norm, y=lrvb_norm, color=prior_par)) +
+    geom_abline(aes(intercept=0, slope=1))
+  
+  grid.arrange(p1, p2)
+    
+}
 
 
 ##################
@@ -242,7 +246,7 @@ results <- SummarizeResults(mcmc_sample, vp_mom, mfvb_sd, lrvb_sd)
 
 if (save_results) {
   influence_cast_sub <- sample_n(influence_cast, 5000)
-  save(results, influence_cast_sub, file=results_file)
+  save(results, influence_cast_sub, prior_sens_cast, file=results_file)
 }
 
 if (FALSE) {

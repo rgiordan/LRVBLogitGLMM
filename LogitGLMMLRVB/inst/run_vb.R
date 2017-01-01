@@ -78,7 +78,6 @@ vp_opt <- GetNaturalParametersFromVector(vp_nat, trust_result$argument, TRUE)
 lrvb_results <- GetLRVBResults(y, y_g, x, vp_opt, pp, opt)
 lrvb_cov <- lrvb_results$lrvb_cov
 stopifnot(min(diag(lrvb_cov)) > 0)
-stopifnot(min(diag(mfvb_cov)) > 0)
 
 fit_time <- Sys.time() - fit_time
 
@@ -97,5 +96,5 @@ log_prior_grad_mat <- do.call(rbind, log_prior_grad_list)
 
 vb_results_file <- file.path(data_directory, paste(analysis_name, "_vb_results.Rdata", sep=""))
 save(stan_results, vp_opt, mp_opt, lrvb_results, opt, fit_time,
-     log_prior_grad_mat, mp_draws, file=vb_results_file)
+     log_prior_grad_mat, mp_draws, draws_mat, file=vb_results_file)
 
