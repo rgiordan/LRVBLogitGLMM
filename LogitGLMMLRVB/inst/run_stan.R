@@ -17,7 +17,7 @@ set.seed(42)
 #############################
 # Simualate some data
 
-n_obs_per_group <- 100
+n_obs_per_group <- 10
 k_reg <- 2
 n_groups <- 100
 n_obs <- n_groups * n_obs_per_group
@@ -30,7 +30,7 @@ true_params$n_groups <- n_groups
 
 true_params$beta <- 1:k_reg
 true_params$tau <- 1
-true_params$mu <- -0.5
+true_params$mu <- -3.5
 true_params$u <- list()
 for (g in 1:n_groups) {
   true_params$u[[g]] <- rnorm(1, true_params$mu, 1 / sqrt(true_params$tau))
@@ -99,19 +99,19 @@ stan_dat <- list(NG = n_groups,
 
 # Some knobs we can tweak.  Note that we need many iterations to accurately assess
 # the prior sensitivity in the MCMC noise.
-iters <- 500
+iters <- 10000
 seed <- 42
 
 # Draw the draws and save.
 mcmc_time <- Sys.time()
 stan_dat$mu_prior_epsilon <- 0
-stan_sim <- sampling(model, data=stan_dat, seed=seed, iter=iters)
+stan_sim <- sampling(model, data=stan_dat, seed=seed, iter=iters, chains=1)
 mcmc_time <- Sys.time() - mcmc_time
 
 # Sample with a few values of epsilon.
 stan_dat_eps1 <- stan_dat
 stan_dat_eps1$mu_prior_epsilon <- 1
-stan_sim_eps1 <- sampling(model, data=stan_dat_eps1, seed=seed, iter=iters)
+stan_sim_eps1 <- sampling(model, data=stan_dat_eps1, seed=seed, iter=iters, chains=1)
 
 # Ensure a difference.
 print(stan_sim, c("mu", "beta"))
@@ -120,7 +120,7 @@ print(stan_sim_eps1, c("mu", "beta"))
 # Sample with a few values of epsilon.
 stan_dat_eps0_1 <- stan_dat
 stan_dat_eps0_1$mu_prior_epsilon <- 0.1
-stan_sim_eps0_1 <- sampling(model, data=stan_dat_eps0_1, seed=seed, iter=iters)
+stan_sim_eps0_1 <- sampling(model, data=stan_dat_eps0_1, seed=seed, iter=iters, chains=1)
 
 # Sample with advi
 stan_advi <- vb(model, data=stan_dat,  algorithm="meanfield", output_samples=iters)
