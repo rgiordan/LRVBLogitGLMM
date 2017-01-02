@@ -59,39 +59,86 @@ log_prior_param_prior <- Matrix(log_prior_derivs$hess[comb_vp_ind, comb_prior_in
 
 prior_sens <- -1 * lrvb_results$jac %*% Matrix::solve(lrvb_results$elbo_hess, log_prior_param_prior)
 
+# Re-scaling for normalized sensitivities.
+lrvb_sd_scale <- sqrt(diag(vb_results$lrvb_results$lrvb_cov))
+mcmc_sd_scale <- sqrt(diag(cov(t(draws_mat)))) 
+
 # Get the MCMC covariance-based results
 log_prior_grad_mat <- vb_results$log_prior_grad_mat
 draws_mat <- t(vb_results$draws_mat)
 draws_mat <- draws_mat - rowMeans(draws_mat)
 prior_sens_mcmc <- draws_mat %*% log_prior_grad_mat / nrow(log_prior_grad_mat)
 
+# Keep a subset of the rows to simulate having made fewer MCMC draws.  For this subset, calculate
+# standard deviations.  Just set keep_rows large to calculate standard deviations for all draws.
+keep_rows <- min(c(nrow(log_prior_grad_mat), 50000))
+draws_mat_small <- draws_mat[, 1:keep_rows]
+log_prior_grad_mat_small <- log_prior_grad_mat[1:keep_rows, ]
+
+mcmc_sd_scale_small <- sqrt(diag(cov(t(draws_mat_small)))) 
+prior_sens_mcmc_small <- draws_mat_small  %*% log_prior_grad_mat_small / keep_rows
+prior_sens_mcmc_squares <- (draws_mat_small ^ 2)  %*% (log_prior_grad_mat_small ^ 2) / keep_rows
+prior_sens_mcmc_sd <- sqrt(prior_sens_mcmc_squares - prior_sens_mcmc_small ^ 2) / sqrt(keep_rows)
+
+draws_mat_small_norm <- draws_mat_small / mcmc_sd_scale_small
+prior_sens_mcmc_norm_small <- draws_mat_small_norm  %*% log_prior_grad_mat_small / keep_rows
+prior_sens_mcmc_norm_squares <- (draws_mat_small_norm ^ 2)  %*% (log_prior_grad_mat_small ^ 2) / keep_rows
+prior_sens_mcmc_norm_sd <- sqrt(prior_sens_mcmc_norm_squares - prior_sens_mcmc_norm_small ^ 2) / sqrt(keep_rows)
+
 # Combine.
-lrvb_sd_scale <- sqrt(diag(vb_results$lrvb_results$lrvb_cov))
-mcmc_sd_scale <- sqrt(diag(cov(t(draws_mat)))) 
 prior_sens_df <- rbind(
   UnpackPriorSensitivityMatrix(prior_sens, pp_indices, method="lrvb"),
   UnpackPriorSensitivityMatrix(prior_sens_mcmc, pp_indices, method="mcmc"),
+  UnpackPriorSensitivityMatrix(prior_sens_mcmc_small, pp_indices, method="mcmc_small"),
+  UnpackPriorSensitivityMatrix(prior_sens_mcmc_sd, pp_indices, method="mcmc_small_sd"),
+
   UnpackPriorSensitivityMatrix(prior_sens / lrvb_sd_scale, pp_indices, method="lrvb_norm"),
-  UnpackPriorSensitivityMatrix(prior_sens_mcmc / mcmc_sd_scale, pp_indices, method="mcmc_norm"))
+  UnpackPriorSensitivityMatrix(prior_sens_mcmc / mcmc_sd_scale, pp_indices, method="mcmc_norm"),
+  UnpackPriorSensitivityMatrix(prior_sens_mcmc_norm_small, pp_indices, method="mcmc_norm_small"),
+  UnpackPriorSensitivityMatrix(prior_sens_mcmc_norm_sd, pp_indices, method="mcmc_norm_small_sd"))
 
 prior_sens_cast <- dcast(
   prior_sens_df, par + component + group + prior_par + k1 + k2 + metric ~ method, value.var="val")
 
 if (FALSE) {
   ggplot(filter(prior_sens_cast, par != "u")) +
-    geom_point(aes(x=mcmc_norm, y=lrvb_norm, color=par)) +
+    geom_point(aes(x=lrvb_norm, y=mcmc_norm, color=par)) +
+    geom_abline(aes(intercept=0, slope=1))
+  
+  # Compare LRVB with the MCMC standard deviations
+  ggplot(filter(prior_sens_cast, par=="u")) +
+    geom_point(aes(x=lrvb_norm, y=mcmc_norm_small, color=prior_par)) +
+    geom_errorbar(aes(x=lrvb_norm,
+                      ymin=mcmc_norm_small - 2 * mcmc_norm_small_sd,
+                      ymax=mcmc_norm_small + 2 * mcmc_norm_small_sd,
+                      color=prior_par)) +
     geom_abline(aes(intercept=0, slope=1))
 
-  p1 <- ggplot(filter(prior_sens_cast, par=="u")) +
-    geom_point(aes(x=mcmc, y=lrvb, color=prior_par)) +
+  # Compare MCMC with its own estimated standard deviations.
+  ggplot(filter(prior_sens_cast, par=="u")) +
+    geom_point(aes(x=mcmc_norm, y=mcmc_norm_small, color=prior_par)) +
+    geom_errorbar(aes(x=mcmc_norm,
+                      ymin=mcmc_norm_small - 2 * mcmc_norm_small_sd,
+                      ymax=mcmc_norm_small + 2 * mcmc_norm_small_sd,
+                      color=prior_par)) +
     geom_abline(aes(intercept=0, slope=1))
   
-  p2 <- ggplot(filter(prior_sens_cast, par=="u")) +
-    geom_point(aes(x=mcmc_norm, y=lrvb_norm, color=prior_par)) +
+  ggplot(filter(prior_sens_cast, par=="u")) +
+    geom_point(aes(x=mcmc_norm, y=mcmc_norm_small, color=prior_par)) +
+    geom_errorbar(aes(x=mcmc_norm,
+                      ymin=mcmc_norm_small - 2 * mcmc_norm_small_sd,
+                      ymax=mcmc_norm_small + 2 * mcmc_norm_small_sd,
+                      color=prior_par)) +
+    geom_abline(aes(intercept=0, slope=1))
+
+  ggplot(filter(prior_sens_cast, par=="u")) +
+    geom_point(aes(x=mcmc, y=mcmc_small, color=prior_par)) +
+    geom_errorbar(aes(x=mcmc_norm,
+                      ymin=mcmc_small - 2 * mcmc_small_sd,
+                      ymax=mcmc_small + 2 * mcmc_small_sd,
+                      color=prior_par)) +
     geom_abline(aes(intercept=0, slope=1))
   
-  grid.arrange(p1, p2)
-    
 }
 
 
