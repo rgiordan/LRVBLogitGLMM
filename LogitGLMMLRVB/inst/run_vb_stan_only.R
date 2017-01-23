@@ -69,16 +69,6 @@ stan_dat <- list(NG = n_groups,
                  std_normal_draws=qnorm(1:N_sim / (N_sim + 1)))
 
 
-init_dat <- list(
-  e_beta=pp$beta_loc,
-  cov_beta=solve(pp$beta_info),
-  e_mu=pp$mu_loc,
-  var_mu=1/pp$mu_info,
-  tau_shape=pp$tau_alpha,
-  tau_rate=pp$tau_beta,
-  e_u=rep(0, n_groups),
-  var_u=rep(1, n_groups)
-  )
 # Some knobs we can tweak.  Note that we need many iterations to accurately assess
 # the prior sensitivity in the MCMC noise.
 iters <- 10000
@@ -86,7 +76,7 @@ seed <- 42
 
 # Draw the draws and save.
 model <- stan_model(model_file)
-vb_optimum <- optimizing(model, data=stan_dat, seed=seed, init=init_dat, verbose=TRUE, iter=1, save_iterations=TRUE, method="")
+vb_optimum <- optimizing(model, data=stan_dat, seed=seed, init=init_dat, verbose=TRUE, save_iterations=TRUE)
 
 
 # A fit with no samples
@@ -100,6 +90,21 @@ log_prob(model_fit, vb_pars_free, adjust_transform=FALSE, gradient=TRUE)
 library(numDeriv)
 library(trust)
 
+model <- stan_model(model_file)
+model_fit <- sampling(model, data=stan_dat, chains=1, iter=1)
+
+init_dat <- list(
+  e_beta=pp$beta_loc + 0.01,
+  cov_beta=solve(pp$beta_info) + 0.01,
+  e_mu=pp$mu_loc + 0.1,
+  var_mu=1/pp$mu_info + 1,
+  tau_shape=pp$tau_alpha + 1,
+  tau_rate=pp$tau_beta + 1,
+  e_u=rep(0, n_groups),
+  var_u=rep(1, n_groups)
+)
+vb_pars_free <- unconstrain_pars(model_fit, init_dat)
+
 LogProbGrad <- function(vb_pars_free) {
   grad_log_prob(model_fit, vb_pars_free, adjust_transform=FALSE)
 }
@@ -112,79 +117,21 @@ LogProbHess <- function(vb_pars_free) {
 TrustWrapper <- function(vb_pars_free) {
   lp_grad <- log_prob(model_fit, vb_pars_free, adjust_transform=FALSE, gradient=TRUE)
   cat("value: ", as.numeric(lp_grad), "\n")
-  print(vb_pars_free)
+  print(constrain_pars(model_fit, vb_pars_free))
   return(list(value=as.numeric(lp_grad), gradient=attr(lp_grad, "grad"), hessian=LogProbHess(vb_pars_free)))
 }
 
 trust_obj <- trust(TrustWrapper, vb_pars_free, 1, rmax=100, minimize=FALSE, iterlim=5)
 
+model_fit@.MISC$stan_fit_instance$param_names()
+unconstrained_opt_pars <-
+  data.frame(name=model_fit@.MISC$stan_fit_instance$unconstrained_param_names(FALSE, FALSE),
+             val=trust_obj$argument,
+             init=vb_pars_free)
+max(abs(trust_obj$argument - vb_pars_free))
+opt_pars <- constrain_pars(model_fit, trust_obj$argument)
+init_pars <- constrain_pars(model_fit, unconstrain_pars(model_fit, init_dat))
 
-
-# Get C++ versions of the data structures.
-prob <- SampleData(n_obs, k_reg, n_groups)
-
-pp <- stan_results$pp
-
-vp_nat <- prob$vp_nat
-
-vp_nat$beta_loc <- rep(0, k_reg)
-vp_nat$mu_loc <- 0
-vp_nat$tau_alpha <- 2
-vp_nat$tau_beta <- 2
-for (g in 1:n_groups) {
-  vp_nat$u[[g]]$u_loc <- 0
-  vp_nat$u[[g]]$u_info <- 1
-}
-
-mcmc_sample <- extract(stan_results$stan_sim)
-
-##############################
-# Optimization
-
-opt <- GetOptions(n_sim=2)
-
-# TODO: pass prob into this!
-bounds <- GetVectorBounds()
-
-optim_fns <- OptimFunctions(y, y_g, x, vp_nat, pp, opt)
-theta_init <- GetNaturalParameterVector(vp_nat, TRUE)
-
-fit_time <- Sys.time()
-# Initialize with BFGS and finish with Newton.
-cat("BFGS initialization.\n")
-optim_result <- optim(theta_init, optim_fns$OptimVal, optim_fns$OptimGrad,
-                      method="L-BFGS-B", lower=bounds$theta_lower, upper=bounds$theta_upper,
-                      control=list(fnscale=-1, factr=1e7))
-
-cat("Trust region with more samples.\n")
-opt <- GetOptions(n_sim=10)
-trust_fn <- TrustFunction(OptimFunctions(y, y_g, x, vp_nat, pp, opt))
-trust_result <- trust(trust_fn, optim_result$par,
-                      rinit=1, rmax=100, minimize=FALSE, blather=TRUE, iterlim=100)
-vp_opt <- GetNaturalParametersFromVector(vp_nat, trust_result$argument, TRUE)
-
-
-# LRVB
-lrvb_results <- GetLRVBResults(y, y_g, x, vp_opt, pp, opt)
-lrvb_cov <- lrvb_results$lrvb_cov
-stopifnot(min(diag(lrvb_cov)) > 0)
-
-fit_time <- Sys.time() - fit_time
-
-
-#####################################
-# Draws to moments
-
-mp_opt <- GetMomentParametersFromNaturalParameters(vp_opt)
-mp_draws <- PackMCMCSamplesIntoMoments(mcmc_sample, mp_opt)
-draws_mat <- do.call(rbind, lapply(mp_draws, function(draw) GetMomentParameterVector(draw, FALSE)))
-log_prior_grad_list <- GetMCMCLogPriorDerivatives(mp_draws, pp, opt)
-log_prior_grad_mat <- do.call(rbind, log_prior_grad_list)
-
-####################################
-# Save results
-
-vb_results_file <- file.path(data_directory, paste(analysis_name, "_vb_results.Rdata", sep=""))
-save(stan_results, vp_opt, mp_opt, lrvb_results, opt, fit_time,
-     log_prior_grad_mat, mp_draws, draws_mat, file=vb_results_file)
+stan_results$true_params$beta
+opt_pars$e_beta
 
