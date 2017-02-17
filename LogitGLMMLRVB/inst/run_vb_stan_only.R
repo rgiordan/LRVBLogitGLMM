@@ -75,9 +75,8 @@ iters <- 10000
 seed <- 42
 
 # Draw the draws and save.
-model <- stan_model(model_file)
-vb_optimum <- optimizing(model, data=stan_dat, seed=seed, init=init_dat, verbose=TRUE, save_iterations=TRUE)
-
+# model <- stan_model(model_file)
+# vb_optimum <- optimizing(model, data=stan_dat, seed=seed, init=init_dat, verbose=TRUE, save_iterations=TRUE)
 
 # A fit with no samples
 # model_fit <- stan(model_file, algorithm="Fixed_param", data=stan_dat)
@@ -90,16 +89,18 @@ log_prob(model_fit, vb_pars_free, adjust_transform=FALSE, gradient=TRUE)
 library(numDeriv)
 library(trust)
 
-model <- stan_model(model_file)
-model_fit <- sampling(model, data=stan_dat, chains=1, iter=1)
+# model <- stan_model(model_file)
+# model_fit <- sampling(model, data=stan_dat, chains=1, iter=1)
+
+mcmc_draws <- extract(stan_results$stan_sim)
 
 init_dat <- list(
-  e_beta=pp$beta_loc + 0.01,
-  cov_beta=solve(pp$beta_info) + 0.01,
-  e_mu=pp$mu_loc + 0.1,
-  var_mu=1/pp$mu_info + 1,
-  tau_shape=pp$tau_alpha + 1,
-  tau_rate=pp$tau_beta + 1,
+  e_beta=colMeans(mcmc_draws$beta),
+  cov_beta=cov(mcmc_draws$beta),
+  e_mu=mean(mcmc_draws$mu),
+  var_mu=var(mcmc_draws$mu),
+  tau_shape=pp$tau_alpha,
+  tau_rate=pp$tau_beta,
   e_u=rep(0, n_groups),
   var_u=rep(1, n_groups)
 )

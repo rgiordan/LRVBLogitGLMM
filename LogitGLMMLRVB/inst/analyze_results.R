@@ -46,7 +46,7 @@ global_indices <- unique(c(vp_indices$beta_loc, as.numeric(vp_indices$beta_info[
 global_mask[global_indices] <- TRUE
 
 #################################
-# Sensitivity analysis
+# Parametric sensitivity analysis
 
 comb_indices <- GetPriorsAndNaturalParametersFromVector(
   vp_opt, pp, as.numeric(1:(vp_opt$encoded_size + pp$encoded_size)), FALSE)
@@ -60,12 +60,12 @@ log_prior_param_prior <- Matrix(log_prior_derivs$hess[comb_vp_ind, comb_prior_in
 prior_sens <- -1 * lrvb_results$jac %*% Matrix::solve(lrvb_results$elbo_hess, log_prior_param_prior)
 
 # Re-scaling for normalized sensitivities.
+draws_mat <- t(vb_results$draws_mat)
 lrvb_sd_scale <- sqrt(diag(vb_results$lrvb_results$lrvb_cov))
 mcmc_sd_scale <- sqrt(diag(cov(t(draws_mat)))) 
 
 # Get the MCMC covariance-based results
 log_prior_grad_mat <- vb_results$log_prior_grad_mat
-draws_mat <- t(vb_results$draws_mat)
 draws_mat <- draws_mat - rowMeans(draws_mat)
 prior_sens_mcmc <- draws_mat %*% log_prior_grad_mat / nrow(log_prior_grad_mat)
 
@@ -91,7 +91,7 @@ prior_sens_df <- rbind(
   UnpackPriorSensitivityMatrix(prior_sens_mcmc, pp_indices, method="mcmc"),
   UnpackPriorSensitivityMatrix(prior_sens_mcmc_small, pp_indices, method="mcmc_small"),
   UnpackPriorSensitivityMatrix(prior_sens_mcmc_sd, pp_indices, method="mcmc_small_sd"),
-
+  
   UnpackPriorSensitivityMatrix(prior_sens / lrvb_sd_scale, pp_indices, method="lrvb_norm"),
   UnpackPriorSensitivityMatrix(prior_sens_mcmc / mcmc_sd_scale, pp_indices, method="mcmc_norm"),
   UnpackPriorSensitivityMatrix(prior_sens_mcmc_norm_small, pp_indices, method="mcmc_norm_small"),
@@ -101,44 +101,6 @@ prior_sens_cast <- dcast(
   prior_sens_df, par + component + group + prior_par + k1 + k2 + metric ~ method, value.var="val")
 
 if (FALSE) {
-  ggplot(filter(prior_sens_cast, par != "u")) +
-    geom_point(aes(x=lrvb_norm, y=mcmc_norm, color=par)) +
-    geom_abline(aes(intercept=0, slope=1))
-  
-  # Compare LRVB with the MCMC standard deviations
-  ggplot(filter(prior_sens_cast, par=="u")) +
-    geom_point(aes(x=lrvb_norm, y=mcmc_norm_small, color=prior_par)) +
-    geom_errorbar(aes(x=lrvb_norm,
-                      ymin=mcmc_norm_small - 2 * mcmc_norm_small_sd,
-                      ymax=mcmc_norm_small + 2 * mcmc_norm_small_sd,
-                      color=prior_par)) +
-    geom_abline(aes(intercept=0, slope=1))
-
-  # Compare MCMC with its own estimated standard deviations.
-  ggplot(filter(prior_sens_cast, par=="u")) +
-    geom_point(aes(x=mcmc_norm, y=mcmc_norm_small, color=prior_par)) +
-    geom_errorbar(aes(x=mcmc_norm,
-                      ymin=mcmc_norm_small - 2 * mcmc_norm_small_sd,
-                      ymax=mcmc_norm_small + 2 * mcmc_norm_small_sd,
-                      color=prior_par)) +
-    geom_abline(aes(intercept=0, slope=1))
-  
-  ggplot(filter(prior_sens_cast, par=="u")) +
-    geom_point(aes(x=mcmc_norm, y=mcmc_norm_small, color=prior_par)) +
-    geom_errorbar(aes(x=mcmc_norm,
-                      ymin=mcmc_norm_small - 2 * mcmc_norm_small_sd,
-                      ymax=mcmc_norm_small + 2 * mcmc_norm_small_sd,
-                      color=prior_par)) +
-    geom_abline(aes(intercept=0, slope=1))
-
-  ggplot(filter(prior_sens_cast, par=="u")) +
-    geom_point(aes(x=mcmc, y=mcmc_small, color=prior_par)) +
-    geom_errorbar(aes(x=mcmc_norm,
-                      ymin=mcmc_small - 2 * mcmc_small_sd,
-                      ymax=mcmc_small + 2 * mcmc_small_sd,
-                      color=prior_par)) +
-    geom_abline(aes(intercept=0, slope=1))
-  
 }
 
 
@@ -197,9 +159,6 @@ GetLogPrior <- function(u) {
   GetBetaLogPrior(u, pp)
 }
 
-# GetLogContaminatingPrior <- function(u) {
-#   GetMuLogStudentTPrior(u, pp_perturb)
-# }
 
 mp_draw <- mp_opt
 log_q_grad <- rep(0, vp_indices$encoded_size)
@@ -210,7 +169,6 @@ GetLogVariationalDensity <- function(u) {
 }
 
 GetLogVariationalDensity(beta)
-
 
 GetInfluenceFunctionSample <- GetInfluenceFunctionSampleFunction(
   GetLogVariationalDensity, GetLogPrior, GetULogDensity, lrvb_pre_factor)
@@ -255,24 +213,6 @@ influence_cast <-
   dcast(draw + beta1 + beta2 ~ param_name + variable) %>%
   mutate(var_beta1_influence = E_beta1_beta1_influence - 2 * E_beta1_val * E_beta1_influence)
 
-if (FALSE) {
-  p1 <- ggplot(influence_cast) +
-    geom_point(aes(x=beta1, y=beta2, color=var_beta1_influence), alpha=0.2) +
-    geom_point(aes(x=mp_opt$beta_e_vec[1], y=mp_opt$beta_e_vec[2]), color="red", size=2) +
-    ggtitle(paste("Influence of beta prior on beta1 variance")) +
-    scale_color_gradient2()
-  p2 <- ggplot(influence_cast) +
-    geom_point(aes(x=beta1, y=beta2, color=E_beta1_beta1_influence), alpha=0.2) +
-    geom_point(aes(x=mp_opt$beta_e_vec[1], y=mp_opt$beta_e_vec[2]), color="red", size=2) +
-    ggtitle(paste("Influence of beta prior on beta1 beta1")) +
-    scale_color_gradient2()
-  p3 <- ggplot(influence_cast) +
-    geom_point(aes(x=beta1, y=beta2, color=E_beta1_influence), alpha=0.2) +
-    geom_point(aes(x=mp_opt$beta_e_vec[1], y=mp_opt$beta_e_vec[2]), color="red", size=2) +
-    ggtitle(paste("Influence of beta prior on beta1")) +
-    scale_color_gradient2()
-  grid.arrange(p1, p2, p3, nrow=1)
-}
 
 
 
@@ -293,37 +233,112 @@ results <- SummarizeResults(mcmc_sample, vp_mom, mfvb_sd, lrvb_sd)
 
 if (save_results) {
   influence_cast_sub <- sample_n(influence_cast, 5000)
-  save(results, influence_cast_sub, prior_sens_cast, mp_opt, file=results_file)
+  mcmc_time <- as.numeric(vb_results$stan_results$mcmc_time, units="secs")
+  vb_time <- as.numeric(vb_results$fit_time, units="secs")
+  num_mcmc_draws <- nrow(as.matrix(vb_results$stan_results$stan_sim))
+  num_logit_sims <- length(vb_results$opt$std_draws)
+  num_obs <- vb_results$stan_results$stan_dat$N
+  beta_dim <- vb_results$stan_results$stan_dat$K
+  save(results, influence_cast_sub, prior_sens_cast, mp_opt,
+       mcmc_time, vb_time, num_mcmc_draws, pp, num_logit_sims, num_obs, beta_dim,
+       file=results_file)
 }
 
-if (FALSE) {
-  ggplot(
-    filter(results, metric == "mean") %>%
-      dcast(par + component + group ~ method, value.var="val") %>%
-      mutate(is_u = par == "u")
-  ) +
-    geom_point(aes(x=mcmc, y=mfvb, color=par), size=3) +
-    geom_abline(aes(intercept=0, slope=1)) +
-    facet_grid(~ is_u)
+stop("Graphs follow -- not executing.")
 
-  ggplot(
-    filter(results, metric == "sd") %>%
-      dcast(par + component + group ~ method, value.var="val") %>%
-      mutate(is_u = par == "u")) +
-    geom_point(aes(x=mcmc, y=mfvb, color="mfvb"), size=3) +
-    geom_point(aes(x=mcmc, y=lrvb, color="lrvb"), size=3) +
-    geom_abline(aes(intercept=0, slope=1)) +
-    facet_grid(~ is_u) +
-    ggtitle("Posterior standard deviations")
 
-  ggplot(
-    filter(results, metric == "sd", par == "u") %>%
-      dcast(par + component + group ~ method, value.var="val")
-  ) +
-    geom_point(aes(x=mcmc, y=mfvb, color="mfvb"), size=3) +
-    geom_point(aes(x=mcmc, y=lrvb, color="lrvb"), size=3) +
-    expand_limits(x=0, y=0) +
-    xlab("MCMC (ground truth)") + ylab("VB") +
-    scale_color_discrete(guide=guide_legend(title="Method")) +
-    geom_abline(aes(intercept=0, slope=1))
-}
+
+# Overall
+
+ggplot(
+  filter(results, metric == "mean") %>%
+    dcast(par + component + group ~ method, value.var="val") %>%
+    mutate(is_u = par == "u")
+) +
+  geom_point(aes(x=mcmc, y=mfvb, color=par), size=3) +
+  geom_abline(aes(intercept=0, slope=1)) +
+  facet_grid(~ is_u)
+
+ggplot(
+  filter(results, metric == "sd") %>%
+    dcast(par + component + group ~ method, value.var="val") %>%
+    mutate(is_u = par == "u")) +
+  geom_point(aes(x=mcmc, y=mfvb, color="mfvb"), size=3) +
+  geom_point(aes(x=mcmc, y=lrvb, color="lrvb"), size=3) +
+  geom_abline(aes(intercept=0, slope=1)) +
+  facet_grid(~ is_u) +
+  ggtitle("Posterior standard deviations")
+
+ggplot(
+  filter(results, metric == "sd", par == "u") %>%
+    dcast(par + component + group ~ method, value.var="val")
+) +
+  geom_point(aes(x=mcmc, y=mfvb, color="mfvb"), size=3) +
+  geom_point(aes(x=mcmc, y=lrvb, color="lrvb"), size=3) +
+  expand_limits(x=0, y=0) +
+  xlab("MCMC (ground truth)") + ylab("VB") +
+  scale_color_discrete(guide=guide_legend(title="Method")) +
+  geom_abline(aes(intercept=0, slope=1))
+
+
+# Sensitivity
+
+ggplot(filter(prior_sens_cast, par != "u")) +
+  geom_point(aes(x=lrvb_norm, y=mcmc_norm, color=par)) +
+  geom_abline(aes(intercept=0, slope=1))
+
+# Compare LRVB with the MCMC standard deviations
+ggplot(filter(prior_sens_cast, par=="u")) +
+  geom_point(aes(x=lrvb_norm, y=mcmc_norm_small, color=prior_par)) +
+  geom_errorbar(aes(x=lrvb_norm,
+                    ymin=mcmc_norm_small - 2 * mcmc_norm_small_sd,
+                    ymax=mcmc_norm_small + 2 * mcmc_norm_small_sd,
+                    color=prior_par)) +
+  geom_abline(aes(intercept=0, slope=1))
+
+# Compare MCMC with its own estimated standard deviations.
+ggplot(filter(prior_sens_cast, par=="u")) +
+  geom_point(aes(x=mcmc_norm, y=mcmc_norm_small, color=prior_par)) +
+  geom_errorbar(aes(x=mcmc_norm,
+                    ymin=mcmc_norm_small - 2 * mcmc_norm_small_sd,
+                    ymax=mcmc_norm_small + 2 * mcmc_norm_small_sd,
+                    color=prior_par)) +
+  geom_abline(aes(intercept=0, slope=1))
+
+ggplot(filter(prior_sens_cast, par=="u")) +
+  geom_point(aes(x=mcmc_norm, y=mcmc_norm_small, color=prior_par)) +
+  geom_errorbar(aes(x=mcmc_norm,
+                    ymin=mcmc_norm_small - 2 * mcmc_norm_small_sd,
+                    ymax=mcmc_norm_small + 2 * mcmc_norm_small_sd,
+                    color=prior_par)) +
+  geom_abline(aes(intercept=0, slope=1))
+
+ggplot(filter(prior_sens_cast, par=="u")) +
+  geom_point(aes(x=mcmc, y=mcmc_small, color=prior_par)) +
+  geom_errorbar(aes(x=mcmc_norm,
+                    ymin=mcmc_small - 2 * mcmc_small_sd,
+                    ymax=mcmc_small + 2 * mcmc_small_sd,
+                    color=prior_par)) +
+  geom_abline(aes(intercept=0, slope=1))
+
+
+# Influence functions
+
+p1 <- ggplot(influence_cast) +
+  geom_point(aes(x=beta1, y=beta2, color=var_beta1_influence), alpha=0.2) +
+  geom_point(aes(x=mp_opt$beta_e_vec[1], y=mp_opt$beta_e_vec[2]), color="red", size=2) +
+  ggtitle(paste("Influence of beta prior on beta1 variance")) +
+  scale_color_gradient2()
+p2 <- ggplot(influence_cast) +
+  geom_point(aes(x=beta1, y=beta2, color=E_beta1_beta1_influence), alpha=0.2) +
+  geom_point(aes(x=mp_opt$beta_e_vec[1], y=mp_opt$beta_e_vec[2]), color="red", size=2) +
+  ggtitle(paste("Influence of beta prior on beta1 beta1")) +
+  scale_color_gradient2()
+p3 <- ggplot(influence_cast) +
+  geom_point(aes(x=beta1, y=beta2, color=E_beta1_influence), alpha=0.2) +
+  geom_point(aes(x=mp_opt$beta_e_vec[1], y=mp_opt$beta_e_vec[2]), color="red", size=2) +
+  ggtitle(paste("Influence of beta prior on beta1")) +
+  scale_color_gradient2()
+grid.arrange(p1, p2, p3, nrow=1)
+
+
