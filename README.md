@@ -41,7 +41,7 @@ change periodically).  That may mean changing the numbers in these lines:
 # In $GIT_REPO_LOC/LRVBLogitGLMM/CmakeLists.txt:
 
 set(EIGEN_LIB ${GIT_REPO_LOC}/math/lib/eigen_3.2.9/)
-set(BOOST_LIB ${GIT_REPO_LOC}/math/lib/boost_1.60.0/)
+set(BOOST_LIB ${GIT_REPO_LOC}/math/lib/boost_1.62.0/)
 ```
 
 You'll need the following R packages:

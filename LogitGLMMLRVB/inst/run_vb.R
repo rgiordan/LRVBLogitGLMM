@@ -15,7 +15,8 @@ project_directory <-
   file.path(Sys.getenv("GIT_REPO_LOC"), "LRVBLogitGLMM")
 source(file.path(project_directory, "LogitGLMMLRVB/inst/optimize_lib.R"))
 
-analysis_name <- "simulated_data"
+# analysis_name <- "simulated_data"
+analysis_name <- "simulated_data_large"
 
 data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
 stan_draws_file <- file.path(data_directory, paste(analysis_name, "_mcmc_draws.Rdata", sep=""))
@@ -58,6 +59,24 @@ bounds <- GetVectorBounds()
 
 optim_fns <- OptimFunctions(y, y_g, x, vp_nat, pp, opt)
 theta_init <- GetNaturalParameterVector(vp_nat, TRUE)
+
+opt_fns <-OptimFunctions(y, y_g, x, vp_nat, pp, opt)
+trust_fn <- TrustFunction(OptimFunctions(y, y_g, x, vp_nat, pp, opt))
+
+hess_time <- Sys.time()
+opt_fns$OptimHess(theta_init)
+hess_time <- Sys.time() - hess_time
+
+this_vp_nat <- GetNaturalParametersFromVector(vp_nat, theta_init, TRUE)
+
+lik_hess_time <- Sys.time()
+hess_lik <- GetSparseLogLikHessian(y, y_g, x, this_vp_nat, pp, opt, TRUE)
+lik_hess_time <- Sys.time() - lik_hess_time
+
+ent_hess_time <- Sys.time()
+hess_ent <- GetSparseEntropyHessian(this_vp_nat, opt)
+ent_hess_time <- Sys.time() - ent_hess_time
+
 
 fit_time <- Sys.time()
 # Initialize with BFGS and finish with Newton.

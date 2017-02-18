@@ -432,8 +432,10 @@ template <typename Func>
 std::vector<Triplet> GetSparseHessian(
     Func functor, VariationalNaturalParameters<double> vp) {
 
+    std::cout << "Starting sparse Hessian\n";
     std::vector<Triplet> all_terms;
     for (int g = 0; g < vp.n_groups; g++) {
+        std::cout << ".";
         functor.g = g;
         VectorXd theta = GetGroupParameterVector(vp, g);
 
@@ -451,6 +453,7 @@ std::vector<Triplet> GetSparseHessian(
             }
         }
     }
+    std::cout << "\nDone with sparse Hessian\n";
     return all_terms;
 }
 

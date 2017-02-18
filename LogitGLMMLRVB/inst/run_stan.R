@@ -10,7 +10,8 @@ library(LogitGLMMLRVB)
 project_directory <-
   file.path(Sys.getenv("GIT_REPO_LOC"), "LRVBLogitGLMM")
 
-analysis_name <- "simulated_data"
+# analysis_name <- "simulated_data"
+analysis_name <- "simulated_data_large"
 
 set.seed(42)
 
@@ -18,8 +19,8 @@ set.seed(42)
 # Simualate some data
 
 n_obs_per_group <- 10
-k_reg <- 2
-n_groups <- 100
+k_reg <- 10
+n_groups <- 1000
 n_obs <- n_groups * n_obs_per_group
 
 set.seed(42)
@@ -99,7 +100,7 @@ stan_dat <- list(NG = n_groups,
 
 # Some knobs we can tweak.  Note that we need many iterations to accurately assess
 # the prior sensitivity in the MCMC noise.
-iters <- 10000
+iters <- 2000
 seed <- 42
 
 # Draw the draws and save.
@@ -109,29 +110,29 @@ stan_sim <- sampling(model, data=stan_dat, seed=seed, iter=iters, chains=1)
 mcmc_time <- Sys.time() - mcmc_time
 
 # Sample with a few values of epsilon.
-stan_dat_eps1 <- stan_dat
-stan_dat_eps1$mu_prior_epsilon <- 1
-stan_sim_eps1 <- sampling(model, data=stan_dat_eps1, seed=seed, iter=iters, chains=1)
+# stan_dat_eps1 <- stan_dat
+# stan_dat_eps1$mu_prior_epsilon <- 1
+# stan_sim_eps1 <- sampling(model, data=stan_dat_eps1, seed=seed, iter=iters, chains=1)
+# 
+# # Ensure a difference.
+# print(stan_sim, c("mu", "beta"))
+# print(stan_sim_eps1, c("mu", "beta"))
 
-# Ensure a difference.
-print(stan_sim, c("mu", "beta"))
-print(stan_sim_eps1, c("mu", "beta"))
-
-# Sample with a few values of epsilon.
-stan_dat_eps0_1 <- stan_dat
-stan_dat_eps0_1$mu_prior_epsilon <- 0.1
-stan_sim_eps0_1 <- sampling(model, data=stan_dat_eps0_1, seed=seed, iter=iters, chains=1)
+# # Sample with a few values of epsilon.
+# stan_dat_eps0_1 <- stan_dat
+# stan_dat_eps0_1$mu_prior_epsilon <- 0.1
+# stan_sim_eps0_1 <- sampling(model, data=stan_dat_eps0_1, seed=seed, iter=iters, chains=1)
 
 # Sample with advi
-stan_advi <- vb(model, data=stan_dat,  algorithm="meanfield", output_samples=iters)
+# stan_advi <- vb(model, data=stan_dat,  algorithm="meanfield", output_samples=iters)
 # stan_advi_full <- vb(model, data=stan_dat,  algorithm="fullrank", output_samples=iters) # This is the same. :(
 
 data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
 stan_draws_file <- file.path(data_directory, paste(analysis_name, "_mcmc_draws.Rdata", sep=""))
 save(stan_sim, mcmc_time, stan_dat,
-     stan_dat_eps1, stan_sim_eps1, 
-     stan_dat_eps0_1, stan_sim_eps0_1,
-     stan_advi,
+     # stan_dat_eps1, stan_sim_eps1, 
+     # stan_dat_eps0_1, stan_sim_eps0_1,
+     # stan_advi,
      true_params, pp, file=stan_draws_file)
 
 
