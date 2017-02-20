@@ -20,6 +20,8 @@
 # include "logit_glmm_model.h"
 # include "eigen_includes.h"
 
+# include <ctime>
+
 
 using std::vector;
 using typename boost::math::tools::promote_args;
@@ -37,33 +39,41 @@ template <typename T> T ELogOneMinusP(VectorXT<T> draws) {
 ////////////////////////////////////////
 // Likelihood functions
 
+// Calculate beta_var in advance:
+// MatrixXT<T> beta_var =
+//     vp.beta.e_outer.mat - vp.beta.e_vec * vp.beta.e_vec.transpose();
 template <typename T> T
-GetObservationLogLikelihood(VariationalMomentParameters<T> const &vp,
-                            Data const &data,
-                            MonteCarloNormalParameter const &logit_p_mc,
-                            int n) {
+GetObservationLogLikelihood(
+        MultivariateNormalMoments<T> const & beta,
+        MatrixXT<T> const & beta_var,
+        GammaMoments<T> const & tau,
+        UnivariateNormalMoments<T> const & mu,
+        UnivariateNormalMoments<T> const & u_g,
+        Data const &data,
+        MonteCarloNormalParameter const &logit_p_mc,
+        int n) {
 
     if (n < 0 || n > data.n_obs) {
         throw std::runtime_error("n out of bounds");
     }
-    if (vp.k_reg != data.k_reg) {
-        throw std::runtime_error("k_reg does not match");
-    }
+    // if (vp.k_reg != data.k_reg) {
+    //     throw std::runtime_error("k_reg does not match");
+    // }
 
-    // TODO: Maybe cache this calculation.
-    MatrixXT<T> beta_var =
-        vp.beta.e_outer.mat - vp.beta.e_vec * vp.beta.e_vec.transpose();
-    int g = data.y_g(n);
-    if (g >= vp.n_groups || g < 0) {
-        throw std::runtime_error("g out of bounds");
-    }
-    T u_var = (vp.u[g].e2 - pow(vp.u[g].e, 2));
+    // int g = data.y_g(n);
+    // if (g >= vp.n_groups || g < 0) {
+    //     throw std::runtime_error("g out of bounds");
+    // }
+    // T u_var = (vp.u[g].e2 - pow(vp.u[g].e, 2));
+    T u_var = (u_g.e2 - pow(u_g.e, 2));
     VectorXT<T> x_row = data.x.row(n).template cast<T>();
     MatrixXT<T> x_outer = x_row * x_row.transpose();
-    T logit_p_mean = x_row.dot(vp.beta.e_vec) + vp.u[g].e;
+    // T logit_p_mean = x_row.dot(vp.beta.e_vec) + vp.u[g].e;
+    T logit_p_mean = x_row.dot(beta.e_vec) + u_g.e;
     T logit_p_var = (x_outer * beta_var).trace() + u_var;
 
     if (logit_p_var < 0) {
+        int g = data.y_g(n);
         std::ostringstream err_msg;
         err_msg << "Negative p variance: " << logit_p_var <<
             " u_var: " << u_var <<
@@ -76,27 +86,32 @@ GetObservationLogLikelihood(VariationalMomentParameters<T> const &vp,
 }
 
 
+// Write this as a function of individual moments in order to avoid
+// computing an entire VariationalMomentParameters object.
 template <typename T> T
-GetGroupLogLikelihood(VariationalMomentParameters<T> const &vp,
-                      Data const &data,
-                      MonteCarloNormalParameter const &logit_p_mc,
-                      int g) {
+GetGroupLogLikelihood(Data const &data,
+                      MonteCarloNormalParameter const & logit_p_mc,
+                      int const & g,
+                      MultivariateNormalMoments<T> const & beta,
+                      GammaMoments<T> const & tau,
+                      UnivariateNormalMoments<T> const & mu,
+                      UnivariateNormalMoments<T> const & u_g) {
+    // if (g + 1 > vp.n_groups || g < 0) {
+    //     throw std::runtime_error("g out of bounds");
+    // }
 
-    if (vp.k_reg != data.k_reg) {
-        throw std::runtime_error("k_reg does not match");
-    }
-    if (g + 1 > vp.n_groups || g < 0) {
-        throw std::runtime_error("g out of bounds");
-    }
+    MatrixXT<T> beta_var =
+        beta.e_outer.mat - beta.e_vec * beta.e_vec.transpose();
 
     T log_lik = 0;
     for (int n = 0; n < data.n_obs; n++ ) {
         if (g == data.y_g(n)) {
-            log_lik += GetObservationLogLikelihood(vp, data, logit_p_mc, n);
+            log_lik += GetObservationLogLikelihood(
+                beta, beta_var, tau, mu, u_g, data, logit_p_mc, n);
         }
     }
 
-    log_lik += vp.u[g].ExpectedLogLikelihood(vp.mu, vp.tau);;
+    log_lik += u_g.ExpectedLogLikelihood(mu, tau);;
 
     return log_lik;
 }
@@ -110,9 +125,15 @@ GetLogLikelihood(VariationalMomentParameters<T> const &vp,
     throw std::runtime_error("k_reg does not match");
   }
 
+  MatrixXT<T> beta_var =
+      vp.beta.e_outer.mat - vp.beta.e_vec * vp.beta.e_vec.transpose();
+
   T log_lik = 0;
   for (int n=0; n < data.n_obs; n++) {
-      log_lik += GetObservationLogLikelihood(vp, data, logit_p_mc, n);
+      int g = data.y_g(n);
+      log_lik += GetObservationLogLikelihood(
+          vp.beta, beta_var, vp.tau, vp.mu, vp.u[g], data, logit_p_mc, n);
+    //   log_lik += GetObservationLogLikelihood(vp, beta_var, data, logit_p_mc, n);
   }
 
   for (int g = 0; g < vp.n_groups; g++) {
@@ -168,9 +189,11 @@ typename promote_args<Tlik, Tprior>::type  GetExpectedLogPrior(
 
 // Single-group versions
 
+
 // The expected log likelihood
 struct GroupExpectedLogLikelihoodFunctor {
   VariationalNaturalParameters<double> base_vp;
+  VariationalMomentParameters<double> base_mp;
   Data data;
   MonteCarloNormalParameter mc_param;
   int g;
@@ -180,13 +203,50 @@ struct GroupExpectedLogLikelihoodFunctor {
       Data const &data,
       MonteCarloNormalParameter const &mc_param,
       int g):
-    base_vp(base_vp), data(data), mc_param(mc_param), g(g) {};
+    base_vp(base_vp), data(data), mc_param(mc_param), g(g) {
+        base_mp = VariationalMomentParameters<double>(base_vp);
+    };
 
   template <typename T> T operator()(VectorXT<T> const &theta) const {
+    std::clock_t begin;
+    std::clock_t end;
+
+    double encode_time;
+    double lik_time;
+    double moment_time;    
+
     VariationalNaturalParameters<T> vp(base_vp);
+    begin = std::clock();
     SetFromGroupVector(theta, vp, g);
-    VariationalMomentParameters<T> vp_mom(vp);
-    T e_log_lik = GetGroupLogLikelihood(vp_mom, data, mc_param, g);
+    end = std::clock();
+    encode_time = double(end - begin) / CLOCKS_PER_SEC;
+
+    begin = std::clock();
+    // VariationalMomentParameters<T> vp_mom(base_mp);
+    // SetMomentsGroup(vp_mom, vp, g);
+
+    MultivariateNormalMoments<T> beta_mp(vp.beta);
+    GammaMoments<T> tau_mp(vp.tau);
+    UnivariateNormalMoments<T> mu_mp(vp.mu);
+    UnivariateNormalMoments<T> u_g_mp(vp.u[g]);
+
+    end = std::clock();
+    moment_time = double(end - begin) / CLOCKS_PER_SEC;
+
+    begin = std::clock();
+    T e_log_lik = GetGroupLogLikelihood(
+        data, mc_param, g, beta_mp, tau_mp, mu_mp, u_g_mp);
+    end = std::clock();
+    lik_time = double(end - begin) / CLOCKS_PER_SEC;
+
+    double tot_time = encode_time + moment_time + lik_time;
+
+    // Encode takes about 10%, and like about 20% and the rest are moments.
+    std::cout << "\nLogLik times: " <<
+        "encode: " << encode_time / tot_time << " " <<
+        "moments no setting: " << moment_time / tot_time << " " <<
+        "lik: " << lik_time / tot_time << " ";
+
     return e_log_lik;
   }
 };

@@ -63,19 +63,30 @@ theta_init <- GetNaturalParameterVector(vp_nat, TRUE)
 opt_fns <-OptimFunctions(y, y_g, x, vp_nat, pp, opt)
 trust_fn <- TrustFunction(OptimFunctions(y, y_g, x, vp_nat, pp, opt))
 
-hess_time <- Sys.time()
-opt_fns$OptimHess(theta_init)
-hess_time <- Sys.time() - hess_time
-
 this_vp_nat <- GetNaturalParametersFromVector(vp_nat, theta_init, TRUE)
 
 lik_hess_time <- Sys.time()
 hess_lik <- GetSparseLogLikHessian(y, y_g, x, this_vp_nat, pp, opt, TRUE)
 lik_hess_time <- Sys.time() - lik_hess_time
 
-ent_hess_time <- Sys.time()
-hess_ent <- GetSparseEntropyHessian(this_vp_nat, opt)
-ent_hess_time <- Sys.time() - ent_hess_time
+
+if (FALSE) {
+  hess_time <- Sys.time()
+  opt_fns$OptimHess(theta_init)
+  hess_time <- Sys.time() - hess_time
+  
+  this_vp_nat <- GetNaturalParametersFromVector(vp_nat, theta_init, TRUE)
+  
+  lik_hess_time <- Sys.time()
+  hess_lik <- GetSparseLogLikHessian(y, y_g, x, this_vp_nat, pp, opt, TRUE)
+  lik_hess_time <- Sys.time() - lik_hess_time
+  
+  ent_hess_time <- Sys.time()
+  hess_ent <- GetSparseEntropyHessian(this_vp_nat, opt)
+  ent_hess_time <- Sys.time() - ent_hess_time
+  # > ent_hess_time
+  # Time difference of 41.79878 secs
+}
 
 
 fit_time <- Sys.time()
@@ -83,13 +94,13 @@ fit_time <- Sys.time()
 cat("BFGS initialization.\n")
 optim_result <- optim(theta_init, optim_fns$OptimVal, optim_fns$OptimGrad,
                       method="L-BFGS-B", lower=bounds$theta_lower, upper=bounds$theta_upper,
-                      control=list(fnscale=-1, factr=1e7))
+                      control=list(fnscale=-1, factr=1e5))
 
 cat("Trust region with more samples.\n")
 opt <- GetOptions(n_sim=10)
 trust_fn <- TrustFunction(OptimFunctions(y, y_g, x, vp_nat, pp, opt))
 trust_result <- trust(trust_fn, optim_result$par,
-                      rinit=1, rmax=100, minimize=FALSE, blather=TRUE, iterlim=100)
+                      rinit=50, rmax=1000, minimize=FALSE, blather=TRUE, iterlim=100)
 vp_opt <- GetNaturalParametersFromVector(vp_nat, trust_result$argument, TRUE)
 
 

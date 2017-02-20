@@ -174,7 +174,8 @@ public:
 
     return vp;
   };
-
+  
+  
   // This is mostly useful for testing.
   void clear() {
     beta.e_vec = VectorXT<T>::Zero(k_reg);
@@ -364,6 +365,20 @@ public:
 };
 
 
+// Set a single group's moment parameters from variational parameters.
+template <class T> void SetMomentsGroup(
+    VariationalMomentParameters<T> &mp,
+    VariationalNaturalParameters<T> const vp, int g) {
+
+    // Set the global parameters
+    mp.beta = MultivariateNormalMoments<T>(vp.beta);
+    mp.tau = GammaMoments<T>(vp.tau);
+    mp.mu = UnivariateNormalMoments<T>(vp.mu);
+
+    mp.u[g] = UnivariateNormalMoments<T>(vp.u[g]);
+};
+
+
 //////////////////////////////
 // Model data
 
@@ -434,14 +449,17 @@ std::vector<Triplet> GetSparseHessian(
 
     std::cout << "Starting sparse Hessian\n";
     std::vector<Triplet> all_terms;
-    for (int g = 0; g < vp.n_groups; g++) {
-        std::cout << ".";
-        functor.g = g;
-        VectorXd theta = GetGroupParameterVector(vp, g);
 
-        double val;
-        VectorXd grad = VectorXd::Zero(theta.size());
-        MatrixXd hess = MatrixXd::Zero(theta.size(), theta.size());
+    // Pre-allocate memory.
+    VectorXd theta = GetGroupParameterVector(vp, 0);
+    double val;
+    VectorXd grad = VectorXd::Zero(theta.size());
+    MatrixXd hess = MatrixXd::Zero(theta.size(), theta.size());
+
+    for (int g = 0; g < vp.n_groups; g++) {
+        functor.g = g;
+        theta = GetGroupParameterVector(vp, g);
+
         stan::math::hessian(functor, theta, val, grad, hess);
 
         // The size of the beta, mu, and tau parameters

@@ -14,7 +14,8 @@ project_directory <-
   file.path(Sys.getenv("GIT_REPO_LOC"), "LRVBLogitGLMM")
 # source(file.path(project_directory, "LogitGLMMLRVB/inst/optimize_lib.R"))
 
-analysis_name <- "simulated_data"
+# analysis_name <- "simulated_data"
+analysis_name <- "simulated_data_large"
 
 data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
 vb_results_file <- file.path(data_directory, paste(analysis_name, "_vb_results.Rdata", sep=""))
