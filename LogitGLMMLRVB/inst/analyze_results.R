@@ -288,7 +288,7 @@ GetBetaImportanceFunctions <- function(beta_comp, vp_opt, pp, lrvb_results) {
   
   # This is the marginal density of the beta_comp component.
   GetLogVariationalDensity <- function(u) {
-    return(dnorm(u, mean=vp_opt$beta_loc[beta_comp], sd=sqrt(beta_cov[beta_comp, beta_comp])))
+    return(dnorm(u, mean=vp_opt$beta_loc[beta_comp], sd=sqrt(beta_cov[beta_comp, beta_comp]), log=TRUE))
   }
 
   # This is the density and derivatives of the full beta density.  
@@ -348,15 +348,7 @@ GetBetaImportanceFunctions <- function(beta_comp, vp_opt, pp, lrvb_results) {
 
 beta_funs <- GetBetaImportanceFunctions(1, vp_opt, pp, lrvb_results)
 
-num_draws <- 500
-num_mc_draws <- 20
-DrawImportanceSamples <- beta_funs$DrawU
-GetImportanceLogProb <- beta_funs$GetULogDensity
-GetLogQGradTerms <- beta_funs$GetLogQGradTerms
-GetLogQ <- beta_funs$GetLogVariationalDensity
-GetLogPrior <- beta_funs$GetLogPrior
 
-stop()
 GetVariationalInfluenceResults <- function(
   num_draws,
   num_mc_draws,
@@ -376,8 +368,7 @@ GetVariationalInfluenceResults <- function(
   influence_lp_ratio <- log_q - log_prior
   log_q_grad_terms <- GetLogQGradTerms(u_draws, num_mc_draws)
 
-  influence_fun  <-
-    do.call(rbind, lapply(u_draws, function(u) { GetLogQGradTerm(u) })) * exp(influence_lp_ratio)
+  influence_fun  <- t(log_q_grad_terms) * exp(influence_lp_ratio)
   u_influence_mat <- (influence_fun ^ 2) * exp(importance_lp_ratio)
   u_influence_mat_pos <- ((influence_fun > 0) * influence_fun ^ 2) * exp(importance_lp_ratio)
   u_influence_mat_neg <- ((influence_fun < 0) * influence_fun ^ 2) * exp(importance_lp_ratio)
@@ -395,12 +386,35 @@ GetVariationalInfluenceResults <- function(
     log_prior=log_prior,
     log_q=log_q,
     importance_lp=importance_lp,
+    log_q_grad_terms=log_q_grad_terms,
     worst_case=worst_case))
 }
 
 
+beta_influence_results <- GetVariationalInfluenceResults(
+  num_draws = 500,
+  num_mc_draws = 20,
+  DrawImportanceSamples = beta_funs$DrawU,
+  GetImportanceLogProb = beta_funs$GetULogDensity,
+  GetLogQGradTerms = beta_funs$GetLogQGradTerms,
+  GetLogQ = beta_funs$GetLogVariationalDensity,
+  GetLogPrior = beta_funs$GetLogPrior)
 
 
+ggplot() +
+  geom_point(aes(x=beta_influence_results$u_draws, y=beta_influence_results$log_q_grad_terms[1, ])) +
+  geom_point(aes(x=beta_influence_results$u_draws, y=exp(beta_influence_results$log_q), color="q")) +
+  geom_point(aes(x=beta_influence_results$u_draws, y=exp(beta_influence_results$log_prior), color="prior")) 
+
+# +
+#   geom_point(aes(x=beta_influence_results$u_draws,
+#                  y=beta_influence_results$log_q_grad_terms[1, ] * exp(beta_influence_results$log_q - beta_influence_results$log_prior), color="inf"))
+
+ggplot() +
+  geom_point(aes(x=beta_influence_results$u_draws, y=beta_influence_results$influence_fun[, 1]))
+
+ggplot() +
+  geom_point(aes(x=beta_influence_results$u_draws, y=exp(beta_influence_results$log_q)))
 
 #############################
 # Unpack the results.
