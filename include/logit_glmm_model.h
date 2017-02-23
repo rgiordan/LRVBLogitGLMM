@@ -270,6 +270,66 @@ struct GroupEntropyFunctor {
 };
 
 
+// The expected log likelihood
+struct GroupELBOFunctor {
+  VariationalNaturalParameters<double> base_vp;
+  Data data;
+  MonteCarloNormalParameter mc_param;
+  int g;
+
+  GroupELBOFunctor(
+      VariationalNaturalParameters<double> const &base_vp,
+      Data const &data,
+      MonteCarloNormalParameter const &mc_param,
+      int g):
+    base_vp(base_vp), data(data), mc_param(mc_param), g(g) {};
+
+  template <typename T> T operator()(VectorXT<T> const &theta) const {
+    // std::clock_t begin;
+    // std::clock_t end;
+    // 
+    // double encode_time;
+    // double elbo_time;
+    // double moment_time;    
+
+    VariationalNaturalParameters<T> vp(base_vp);
+    // begin = std::clock();
+    SetFromGroupVector(theta, vp, g);
+    // end = std::clock();
+    // encode_time = double(end - begin) / CLOCKS_PER_SEC;
+
+    // begin = std::clock();
+    // VariationalMomentParameters<T> vp_mom(base_mp);
+    // SetMomentsGroup(vp_mom, vp, g);
+
+    MultivariateNormalMoments<T> beta_mp(vp.beta);
+    GammaMoments<T> tau_mp(vp.tau);
+    UnivariateNormalMoments<T> mu_mp(vp.mu);
+    UnivariateNormalMoments<T> u_g_mp(vp.u[g]);
+
+    // end = std::clock();
+    // moment_time = double(end - begin) / CLOCKS_PER_SEC;
+
+    // begin = std::clock();
+    T elbo =
+        GetGroupLogLikelihood(data, mc_param, g, beta_mp, tau_mp, mu_mp, u_g_mp) +
+        GetUnivariateNormalEntropy(vp.u[g].info);
+    // end = std::clock();
+    // elbo_time = double(end - begin) / CLOCKS_PER_SEC;
+
+    // double tot_time = encode_time + moment_time + elbo_time;
+    // 
+    // std::cout << "\nGroup ELBO times: " <<
+    //     "encode: " << encode_time / tot_time << " " <<
+    //     "moments no setting: " << moment_time / tot_time << " " <<
+    //     "ELBO: " << elbo_time / tot_time << "\n";
+
+    return elbo;
+  }
+};
+
+
+
 // The entropy of only the global parameters.
 struct GlobalEntropyFunctor {
   VariationalNaturalParameters<double> base_vp;
@@ -591,6 +651,13 @@ std::vector<Triplet> GetSparseLogLikHessian(
 std::vector<Triplet> GetSparseEntropyHessian(
     VariationalNaturalParameters<double> vp,
     ModelOptions opt);
+
+std::vector<Triplet> GetSparseELBOHessianTerms(
+    Data data,
+    VariationalNaturalParameters<double> vp,
+    PriorParameters<double> pp,
+    ModelOptions opt,
+    bool include_prior);
 
 SparseMatrix<double> GetCovariance(
     const VariationalNaturalParameters<double> &vp,

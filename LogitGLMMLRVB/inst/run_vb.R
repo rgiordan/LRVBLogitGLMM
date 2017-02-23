@@ -52,7 +52,8 @@ mcmc_sample <- extract(stan_results$stan_sim)
 ##############################
 # Optimization
 
-opt <- GetOptions(n_sim=2)
+# The Hessian time is not strongly affected by the number of simulations.
+opt <- GetOptions(n_sim=10)
 
 # TODO: pass prob into this!
 bounds <- GetVectorBounds()
@@ -63,14 +64,14 @@ theta_init <- GetNaturalParameterVector(vp_nat, TRUE)
 opt_fns <-OptimFunctions(y, y_g, x, vp_nat, pp, opt)
 trust_fn <- TrustFunction(OptimFunctions(y, y_g, x, vp_nat, pp, opt))
 
-this_vp_nat <- GetNaturalParametersFromVector(vp_nat, theta_init, TRUE)
-
-lik_hess_time <- Sys.time()
-hess_lik <- GetSparseLogLikHessian(y, y_g, x, this_vp_nat, pp, opt, TRUE)
-lik_hess_time <- Sys.time() - lik_hess_time
-
 
 if (FALSE) {
+  this_vp_nat <- GetNaturalParametersFromVector(vp_nat, theta_init, TRUE)
+  
+  lik_hess_time <- Sys.time()
+  hess_lik <- GetSparseELBOHessian(y, y_g, x, this_vp_nat, pp, opt, TRUE)
+  lik_hess_time <- Sys.time() - lik_hess_time
+  
   hess_time <- Sys.time()
   opt_fns$OptimHess(theta_init)
   hess_time <- Sys.time() - hess_time

@@ -44,8 +44,7 @@ OptimFunctions <- function(y, y_g, x, vp_nat_init, pp, opt, verbose=TRUE) {
 
   OptimHess <- function(theta) {
     this_vp_nat <- GetNaturalParametersFromVector(vp_nat_init, theta, TRUE)
-    hess <- GetSparseLogLikHessian(y, y_g, x, this_vp_nat, pp, opt, TRUE) +
-            GetSparseEntropyHessian(this_vp_nat, opt)
+    hess <- GetSparseELBOHessian(y, y_g, x, this_vp_nat, pp, opt, TRUE)
     return(hess)
   }
 
@@ -117,8 +116,7 @@ GetLRVBResults <- function(y, y_g, x, vp_nat, pp, opt=GetOptions()) {
   jac <- Matrix(GetMomentJacobian(vp_nat, opt)$jacobian)
 
   hess_time <- Sys.time()
-  elbo_hess <- GetSparseLogLikHessian(y, y_g, x, vp_nat, pp, opt, TRUE) +
-               GetSparseEntropyHessian(vp_nat, opt)
+  elbo_hess <- GetSparseELBOHessian(y, y_g, x, vp_nat, pp, opt, TRUE)
   hess_time <- Sys.time() - hess_time
 
   # model_hess2 <- GetELBODerivatives(y, y_g, x, vp_nat_bfgs, pp, GetOptions(calculate_hessian = TRUE))
@@ -312,5 +310,6 @@ UnpackPriorSensitivityMatrix <- function(prior_sens_mat, pp_indices, method) {
     GetPriorSensitivityResult(prior_sens_mat[, pp_indices$tau_beta], "tau_beta", method=method)
   return(do.call(rbind, result_list))
 }
+
 
 

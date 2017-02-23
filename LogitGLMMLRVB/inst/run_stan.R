@@ -124,7 +124,7 @@ mcmc_time <- Sys.time() - mcmc_time
 # stan_sim_eps0_1 <- sampling(model, data=stan_dat_eps0_1, seed=seed, iter=iters, chains=1)
 
 # Sample with advi
-# stan_advi <- vb(model, data=stan_dat,  algorithm="meanfield", output_samples=iters)
+stan_advi <- vb(model, data=stan_dat,  algorithm="meanfield", output_samples=iters)
 # stan_advi_full <- vb(model, data=stan_dat,  algorithm="fullrank", output_samples=iters) # This is the same. :(
 
 data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
@@ -132,7 +132,7 @@ stan_draws_file <- file.path(data_directory, paste(analysis_name, "_mcmc_draws.R
 save(stan_sim, mcmc_time, stan_dat,
      # stan_dat_eps1, stan_sim_eps1, 
      # stan_dat_eps0_1, stan_sim_eps0_1,
-     # stan_advi,
+     stan_advi,
      true_params, pp, file=stan_draws_file)
 
 

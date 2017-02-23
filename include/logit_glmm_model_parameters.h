@@ -457,6 +457,7 @@ std::vector<Triplet> GetSparseHessian(
     MatrixXd hess = MatrixXd::Zero(theta.size(), theta.size());
 
     for (int g = 0; g < vp.n_groups; g++) {
+        std::cout << ".";
         functor.g = g;
         theta = GetGroupParameterVector(vp, g);
 

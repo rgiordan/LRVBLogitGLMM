@@ -89,3 +89,7 @@ GetSparseEntropyHessian <- function(r_vp, r_opt) {
     .Call('LogitGLMMLRVB_GetSparseEntropyHessian', PACKAGE = 'LogitGLMMLRVB', r_vp, r_opt)
 }
 
+GetSparseELBOHessian <- function(r_y, r_y_g, r_x, r_vp, r_pp, r_opt, include_prior) {
+    .Call('LogitGLMMLRVB_GetSparseELBOHessian', PACKAGE = 'LogitGLMMLRVB', r_y, r_y_g, r_x, r_vp, r_pp, r_opt, include_prior)
+}
+

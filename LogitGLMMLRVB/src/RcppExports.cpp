@@ -294,3 +294,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// GetSparseELBOHessian
+Eigen::SparseMatrix<double> GetSparseELBOHessian(const Eigen::Map<Eigen::VectorXi> r_y, const Eigen::Map<Eigen::VectorXi> r_y_g, const Eigen::Map<Eigen::MatrixXd> r_x, const Rcpp::List r_vp, const Rcpp::List r_pp, const Rcpp::List r_opt, const bool include_prior);
+RcppExport SEXP LogitGLMMLRVB_GetSparseELBOHessian(SEXP r_ySEXP, SEXP r_y_gSEXP, SEXP r_xSEXP, SEXP r_vpSEXP, SEXP r_ppSEXP, SEXP r_optSEXP, SEXP include_priorSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::VectorXi> >::type r_y(r_ySEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::VectorXi> >::type r_y_g(r_y_gSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::MatrixXd> >::type r_x(r_xSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List >::type r_vp(r_vpSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List >::type r_pp(r_ppSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List >::type r_opt(r_optSEXP);
+    Rcpp::traits::input_parameter< const bool >::type include_prior(include_priorSEXP);
+    rcpp_result_gen = Rcpp::wrap(GetSparseELBOHessian(r_y, r_y_g, r_x, r_vp, r_pp, r_opt, include_prior));
+    return rcpp_result_gen;
+END_RCPP
+}

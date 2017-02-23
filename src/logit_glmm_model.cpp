@@ -276,6 +276,40 @@ std::vector<Triplet> GetSparseEntropyHessian(
 }
 
 
+std::vector<Triplet> GetSparseELBOHessianTerms(
+    Data data,
+    VariationalNaturalParameters<double> vp,
+    PriorParameters<double> pp,
+    ModelOptions opt,
+    bool include_prior) {
+
+    vp.unconstrained = opt.unconstrained;
+    MonteCarloNormalParameter mc_param = opt.GetMonteCarloNormalParameter();
+    GroupELBOFunctor ELBO(vp, data, mc_param, 0);
+
+    std::vector<Triplet> all_terms = GetSparseHessian(ELBO, vp);
+
+    if (include_prior) {
+        ExpectedLogPriorFunctor ExpectedLogPrior(vp, pp);
+        ExpectedLogPrior.global_only = true;
+        double val;
+        VectorXd theta = GetGlobalParameterVector(vp);
+        VectorXd grad = VectorXd::Zero(theta.size());
+        MatrixXd hess = MatrixXd::Zero(theta.size(), theta.size());
+
+        stan::math::set_zero_all_adjoints();
+        stan::math::hessian(ExpectedLogPrior, theta, val, grad, hess);
+
+        for (int i1 = 0; i1 < hess.rows(); i1++) {
+            for (int i2 = 0; i2 < hess.cols(); i2++) {
+                all_terms.push_back(Triplet(i1, i2, hess(i1, i2)));
+            }
+        }
+    }
+
+    return all_terms;
+}
+
 
 // The return type will not actually be derivatives, but I'll use the
 // return type to avoid defining a type just for this.  The "grad" will

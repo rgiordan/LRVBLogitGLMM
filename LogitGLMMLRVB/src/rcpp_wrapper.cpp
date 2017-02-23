@@ -592,3 +592,31 @@ Eigen::SparseMatrix<double> GetSparseEntropyHessian(
 
     return hess;
 }
+
+
+// [[Rcpp::export]]
+Eigen::SparseMatrix<double> GetSparseELBOHessian(
+    const Eigen::Map<Eigen::VectorXi> r_y,
+    const Eigen::Map<Eigen::VectorXi> r_y_g,
+    const Eigen::Map<Eigen::MatrixXd> r_x,
+    const Rcpp::List r_vp,
+    const Rcpp::List r_pp,
+    const Rcpp::List r_opt,
+    const bool include_prior) {
+
+    ModelOptions opt = ConvertListToOption(r_opt);
+    VariationalNaturalParameters<double> vp =
+        ConvertNaturalParametersFromList(r_vp);
+    PriorParameters<double> pp = ConvertPriorParametersFromList(r_pp);
+    Data data = ConvertDataFromR(r_y, r_y_g, r_x);
+    std::vector<Triplet> terms =
+        GetSparseELBOHessianTerms(data, vp, pp, opt, include_prior);
+
+    Eigen::SparseMatrix<double>
+        hess(vp.offsets.encoded_size, vp.offsets.encoded_size);
+    hess.setFromTriplets(terms.begin(), terms.end());
+    hess.makeCompressed();
+
+    return hess;
+}
+
