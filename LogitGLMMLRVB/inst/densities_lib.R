@@ -68,9 +68,14 @@ GetBetaImportanceFunctions <- function(beta_comp, vp_opt, pp, lrvb_results) {
   }
   
   # This is the density and derivatives of the full beta density.  
-  mp_draw <- mp_opt
-  log_q_grad <- rep(0, vp_indices$encoded_size)
+  global_mask <- rep(FALSE, vp_opt$encoded_size)
+  global_indices <- unique(c(vp_indices$beta_loc, as.numeric(vp_indices$beta_info[]),
+                             vp_indices$mu_loc, vp_indices$mu_info,
+                             vp_indices$tau_alpha, vp_indices$tau_beta))
+  global_mask[global_indices] <- TRUE
   GetFullBetaLogVariationalDensity <- function(u) {
+    mp_draw <- mp_opt
+    log_q_grad <- rep(0, vp_indices$encoded_size)
     beta_q_derivs <- GetBetaLogDensity(u, vp_opt, mp_draw, pp, TRUE, TRUE)
     log_q_grad[global_mask] <- beta_q_derivs$grad
     list(val=beta_q_derivs$val, grad=log_q_grad)
@@ -83,7 +88,7 @@ GetBetaImportanceFunctions <- function(beta_comp, vp_opt, pp, lrvb_results) {
   
   lrvb_pre_factor <- -1 * lrvb_results$jac %*% solve(lrvb_results$elbo_hess)
   DrawConditionalBeta <- GetConditionalMVNFunction(beta_comp, vp_opt$beta_loc, vp_opt$beta_info)
-  GetLogQGradTerms <- function(u_draws, num_mc_draws) {
+  GetLogQGradResults <- function(u_draws, num_mc_draws, normalize=TRUE) {
     c_ind <- setdiff(1:vp_opt$k_reg, beta_comp)
     beta_std_draws <- rmvnorm(num_mc_draws, mean=rep(0, vp_opt$k - 1))
     
@@ -102,20 +107,23 @@ GetBetaImportanceFunctions <- function(beta_comp, vp_opt, pp, lrvb_results) {
     # The dimensions of lrvb_term_draws work out to be c(moment index, conditional beta draw, u draw)
     lrvb_term_draws <- apply(beta_u_draws, MARGIN=c(2, 3), FUN=GetFullLogQGradTerm)
     lrvb_term_e <- apply(lrvb_term_draws, MARGIN=c(1, 3), FUN=mean)
+
+    # TODO: consider centering lrvb_term_e by the importance-sample weighted means.  The expectation of the
+    # log gradient should be zero but it might not be due to sampling variation.
+    if (normalize) {
+      imp_ratio <- exp(GetLogVariationalDensity(u_draws) - GetULogDensity(u_draws))
+      lrvb_term_e_means <- colSums(imp_ratio * t(lrvb_term_e)) / sum(imp_ratio)
+      lrvb_term_e <- lrvb_term_e - lrvb_term_e_means
+    }
+    
+    
     lrvb_terms <- lrvb_pre_factor %*% lrvb_term_e
 
-    if (FALSE) {
-      u_draws_flat <- rep(u_draws, num_mc_draws)
-      ind <- mp_indices$beta_e_vec[beta_comp]
-      # ind <- mp_indices$beta_e_outer[beta_comp, beta_comp]
-      print(ggplot() +
-        geom_point(aes(x=u_draws_flat, y=as.numeric(t(lrvb_term_draws[ind, , ])), color="draw")) +
-        geom_line(aes(x=u_draws, y=lrvb_term_e[ind, ], color="e")))
-      ggplot() +
-        geom_point(aes(x=u_draws_flat, y=as.numeric(t(lrvb_term_draws[ind, , ])), color="draw")) +
-        geom_line(aes(x=u_draws, y=lrvb_terms[ind, ], color="lrvb"))
-    }
-    return(lrvb_terms)
+    return(list(lrvb_terms=lrvb_terms, lrvb_term_e=lrvb_term_e, lrvb_term_draws=lrvb_term_draws, beta_u_draws=beta_u_draws))
+  }
+
+  GetLogQGradTerms <- function(u_draws, num_mc_draws, normalize=TRUE) {
+    GetLogQGradResults(u_draws, num_mc_draws, normalize=normalize)$lrvb_terms
   }
   
   return(list(GetULogDensity=GetULogDensity,
@@ -123,6 +131,7 @@ GetBetaImportanceFunctions <- function(beta_comp, vp_opt, pp, lrvb_results) {
               GetLogPrior=GetLogPrior,
               GetLogPriorVec=GetLogPriorVec,
               GetLogVariationalDensity=GetLogVariationalDensity,
-              GetLogQGradTerms=GetLogQGradTerms))
+              GetLogQGradTerms=GetLogQGradTerms,
+              GetLogQGradResults=GetLogQGradResults))
 }
 
