@@ -107,144 +107,24 @@ prior_sens_cast <- dcast(
 ##################
 # Influence functions
 
-# mp_draw <- mp_opt
-# log_q_grad <- rep(0, vp_indices$encoded_size)
-# GetLogVariationalDensity <- function(u) {
-#   beta_q_derivs <- GetBetaLogDensity(u, vp_opt, mp_draw, pp, TRUE, TRUE)
-#   log_q_grad[global_mask] <- beta_q_derivs$grad
-#   list(val=beta_q_derivs$val, grad=log_q_grad)
-# }
-
-
-# beta_funs <- GetBetaImportanceFunctions(beta_comp, vp_opt, pp, lrvb_results)
-# 
-# # For debugging
-# num_draws = 500
-# num_mc_draws = 20
-# DrawImportanceSamples = beta_funs$DrawU
-# GetImportanceLogProb = beta_funs$GetULogDensity
-# GetLogQGradTerms = beta_funs$GetLogQGradTerms
-# GetLogQ = beta_funs$GetLogVariationalDensity
-# GetLogPrior = beta_funs$GetLogPrior
-# 
-# u_draws <- DrawImportanceSamples(num_draws)
-# 
-# log_prior <- sapply(u_draws, GetLogPrior)
-# log_q <- sapply(u_draws, GetLogQ)
-# importance_lp <- sapply(u_draws, GetImportanceLogProb)
-# 
-# importance_lp_ratio <- log_prior - importance_lp
-# influence_lp_ratio <- log_q - log_prior
-# log_q_grad_terms <- GetLogQGradTerms(u_draws, num_mc_draws)
-# 
-
-GetVariationalInfluenceResults <- function(
-  num_draws,
-  num_mc_draws,
-  DrawImportanceSamples,
-  GetImportanceLogProb,
-  GetLogQGradTerms,
-  GetLogQ,
-  GetLogPrior) {
-  
-  u_draws <- DrawImportanceSamples(num_draws)
-  
-  log_prior <- sapply(u_draws, GetLogPrior)
-  log_q <- sapply(u_draws, GetLogQ)
-  importance_lp <- sapply(u_draws, GetImportanceLogProb)
-
-  importance_lp_ratio <- log_prior - importance_lp
-  influence_lp_ratio <- log_q - log_prior
-  log_q_grad_terms <- GetLogQGradTerms(u_draws, num_mc_draws, normalize=TRUE)
-
-  influence_fun  <- t(log_q_grad_terms) * exp(influence_lp_ratio)
-  u_influence_mat <- (influence_fun ^ 2) * exp(importance_lp_ratio)
-  u_influence_mat_pos <- ((influence_fun > 0) * influence_fun ^ 2) * exp(importance_lp_ratio)
-  u_influence_mat_neg <- ((influence_fun < 0) * influence_fun ^ 2) * exp(importance_lp_ratio)
-  
-  u_influence_mat_pos_norm <- sqrt(colMeans(u_influence_mat_pos))
-  u_influence_mat_neg_norm <- sqrt(colMeans(u_influence_mat_neg))
-
-  pos_worse <- u_influence_mat_pos_norm > u_influence_mat_neg_norm
-  worst_case <- ifelse(pos_worse, u_influence_mat_pos_norm, u_influence_mat_neg_norm)
-  worst_case_u <-
-    sapply(1:ncol(influence_fun),
-           function(ind) {
-             # Choose the positive or negative part according to pos_worse
-             pos_sign <- 2 * pos_worse[ind] - 1
-             exp(log_prior) * abs(influence_fun[, ind]) * (pos_sign * influence_fun[, ind] >= 0) / worst_case[ind]
-             })
-  
-  return(list(
-    u_draws=u_draws,
-    influence_fun=influence_fun,
-    importance_lp_ratio=importance_lp_ratio,
-    influence_lp_ratio=influence_lp_ratio,
-    log_prior=log_prior,
-    log_q=log_q,
-    importance_lp=importance_lp,
-    log_q_grad_terms=log_q_grad_terms,
-    worst_case=worst_case,
-    worst_case_u=worst_case_u))
-}
-
 
 beta_comp <- 1
 beta_funs <- GetBetaImportanceFunctions(beta_comp, vp_opt, pp, lrvb_results)
 
+num_mc_draws <- 5
 beta_influence_results <- GetVariationalInfluenceResults(
-  num_draws = 1000,
-  num_mc_draws = 10,
+  num_draws = 200,
   DrawImportanceSamples = beta_funs$DrawU,
   GetImportanceLogProb = beta_funs$GetULogDensity,
-  GetLogQGradTerms = beta_funs$GetLogQGradTerms,
+  GetLogQGradTerms = function(u_draws) { beta_funs$GetLogQGradTerms(u_draws, num_mc_draws, normalize=TRUE) },
   GetLogQ = beta_funs$GetLogVariationalDensity,
   GetLogPrior = beta_funs$GetLogPrior)
 
-######### debugging
-if (FALSE) {
-  beta_funs <- GetBetaImportanceFunctions(beta_comp, vp_opt, pp, lrvb_results)
-  u_draws <- beta_funs$DrawU(1000)
-  log_q_grad_results <- beta_funs$GetLogQGradResults(u_draws, 10, normalize=TRUE)
-  
-  lrvb_term_e_df <-
-    data.frame(t(log_q_grad_results$lrvb_term_e)) %>%
-    mutate(u=u_draws, imp_ratio=exp(beta_funs$GetLogVariationalDensity(u_draws) - beta_funs$GetULogDensity(u_draws))) %>%
-    melt(id.vars=c("u", "imp_ratio")) %>%
-    mutate(ind=as.integer(as.character(sub("X", "", variable)))) %>%
-    filter(ind <= max(vp_indices$beta_info))
-  
-  group_by(lrvb_term_e_df, variable) %>%
-    summarize(avg=mean(value), weighted_avg=mean(value * imp_ratio))
-  
-  ggplot(filter(lrvb_term_e_df, ind > max(vp_indices$beta_loc))) +
-    geom_line(aes(x=u, y=value, color=factor(ind)))
-  
-  ggplot(filter(lrvb_term_e_df, ind == beta_comp)) +
-    geom_line(aes(x=u, y=value, color="grad term")) +
-    geom_line(aes(x=u, y=u - mp_opt$beta_e_vec[beta_comp], color="u - e"))
-  
-  beta_u_draws <- log_q_grad_results$beta_u_draws
-  beta_u_df <- melt(beta_u_draws) %>%
-    rename(k=Var1, draw=Var2, u_ind=Var3) %>%
-    inner_join(data.frame(u_ind=1:length(u_draws), u=u_draws), by="u_ind")
-  
-  max(beta_u_df$k)
-  max(beta_u_df$u_ind)
-  max(beta_u_df$draw)
-  
-  ggplot(beta_u_df) +
-    geom_line(aes(x=u, y=value, color=factor(draw))) +
-    facet_grid( ~ k)
-  ##############
-}
-
-  
 
 # Get MCMC worst-case
 draws_mat <- vb_results$draws_mat
 param_draws <- draws_mat[, beta_comp]
-mcmc_funs <- GetMCMCInfluenceFunctions(param_draws, beta_funs$GetLogPriorVec)
+mcmc_funs <- GetMCMCInfluenceFunctions(param_draws, beta_funs$GetLogPrior)
 mcmc_worst_case <- sapply(1:ncol(draws_mat), function(ind) { mcmc_funs$GetMCMCWorstCase(draws_mat[, ind]) })
 
 

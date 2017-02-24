@@ -57,15 +57,13 @@ GetBetaImportanceFunctions <- function(beta_comp, vp_opt, pp, lrvb_results) {
   GetLogPrior <- function(u) {
     dnorm(u, mean=pp$beta_loc[beta_comp], sd=sqrt(prior_cov[beta_comp, beta_comp]), log=TRUE)
   }
-  
-  GetLogPriorVec <- function(u_vec) {
-    GetLogPrior(u_vec)
-  }
-  
+
   # This is the marginal density of the beta_comp component.
   GetLogVariationalDensity <- function(u) {
     return(dnorm(u, mean=vp_opt$beta_loc[beta_comp], sd=sqrt(beta_cov[beta_comp, beta_comp]), log=TRUE))
   }
+  
+  # The remainder is used to calculate the gbar term.
   
   # This is the density and derivatives of the full beta density.  
   global_mask <- rep(FALSE, vp_opt$encoded_size)
@@ -108,8 +106,6 @@ GetBetaImportanceFunctions <- function(beta_comp, vp_opt, pp, lrvb_results) {
     lrvb_term_draws <- apply(beta_u_draws, MARGIN=c(2, 3), FUN=GetFullLogQGradTerm)
     lrvb_term_e <- apply(lrvb_term_draws, MARGIN=c(1, 3), FUN=mean)
 
-    # TODO: consider centering lrvb_term_e by the importance-sample weighted means.  The expectation of the
-    # log gradient should be zero but it might not be due to sampling variation.
     if (normalize) {
       imp_ratio <- exp(GetLogVariationalDensity(u_draws) - GetULogDensity(u_draws))
       lrvb_term_e_means <- colSums(imp_ratio * t(lrvb_term_e)) / sum(imp_ratio)
@@ -123,13 +119,12 @@ GetBetaImportanceFunctions <- function(beta_comp, vp_opt, pp, lrvb_results) {
   }
 
   GetLogQGradTerms <- function(u_draws, num_mc_draws, normalize=TRUE) {
-    GetLogQGradResults(u_draws, num_mc_draws, normalize=normalize)$lrvb_terms
+    as.matrix(GetLogQGradResults(u_draws, num_mc_draws, normalize=normalize)$lrvb_terms)
   }
   
   return(list(GetULogDensity=GetULogDensity,
               DrawU=DrawU,
               GetLogPrior=GetLogPrior,
-              GetLogPriorVec=GetLogPriorVec,
               GetLogVariationalDensity=GetLogVariationalDensity,
               GetLogQGradTerms=GetLogQGradTerms,
               GetLogQGradResults=GetLogQGradResults))
