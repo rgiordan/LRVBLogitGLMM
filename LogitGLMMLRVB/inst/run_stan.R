@@ -10,28 +10,50 @@ library(LogitGLMMLRVB)
 project_directory <-
   file.path(Sys.getenv("GIT_REPO_LOC"), "LRVBLogitGLMM")
 
-# analysis_name <- "simulated_data"
-analysis_name <- "simulated_data_large"
+analysis_name <- "simulated_data_small"
+# analysis_name <- "simulated_data_large"
 
 set.seed(42)
 
 #############################
 # Simualate some data
 
-n_obs_per_group <- 10
-k_reg <- 10
-n_groups <- 1000
-n_obs <- n_groups * n_obs_per_group
+if (analysis_name == "simulated_data_large") {
+  n_obs_per_group <- 10
+  k_reg <- 10
+  n_groups <- 1000
+  n_obs <- n_groups * n_obs_per_group
+  
+  set.seed(42)
+  true_params <- list()
+  true_params$n_obs <- n_obs
+  true_params$k_reg <- k_reg
+  true_params$n_groups <- n_groups
+  true_params$tau <- 1
+  true_params$mu <- -3.5
+  true_params$beta <- 1:k_reg
 
-set.seed(42)
-true_params <- list()
-true_params$n_obs <- n_obs
-true_params$k_reg <- k_reg
-true_params$n_groups <- n_groups
+  iters <- 2000
+} else if (analysis_name == "simulated_data_small") {
+  n_obs_per_group <- 10
+  k_reg <- 5
+  n_groups <- 100
+  n_obs <- n_groups * n_obs_per_group
+  
+  set.seed(42)
+  true_params <- list()
+  true_params$n_obs <- n_obs
+  true_params$k_reg <- k_reg
+  true_params$n_groups <- n_groups
+  true_params$tau <- 1
+  true_params$mu <- -3.5
+  true_params$beta <- 1:k_reg
+  
+  iters <- 10000
+} else {
+  stop("Unknown analysis name.")
+}
 
-true_params$beta <- 1:k_reg
-true_params$tau <- 1
-true_params$mu <- -3.5
 true_params$u <- list()
 for (g in 1:n_groups) {
   true_params$u[[g]] <- rnorm(1, true_params$mu, 1 / sqrt(true_params$tau))
@@ -100,7 +122,6 @@ stan_dat <- list(NG = n_groups,
 
 # Some knobs we can tweak.  Note that we need many iterations to accurately assess
 # the prior sensitivity in the MCMC noise.
-iters <- 2000
 seed <- 42
 
 # Draw the draws and save.

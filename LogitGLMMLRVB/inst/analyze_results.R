@@ -13,9 +13,9 @@ library(gridExtra)
 
 project_directory <-
   file.path(Sys.getenv("GIT_REPO_LOC"), "LRVBLogitGLMM")
-# source(file.path(project_directory, "LogitGLMMLRVB/inst/optimize_lib.R"))
+source(file.path(project_directory, "LogitGLMMLRVB/inst/densities_lib.R"))
 
-analysis_name <- "simulated_data"
+analysis_name <- "simulated_data_small"
 # analysis_name <- "simulated_data_large"
 
 data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
@@ -107,116 +107,6 @@ prior_sens_cast <- dcast(
 ##################
 # Influence functions
 
-
-# # Monte Carlo samples
-# n_samples <- 50000
-# 
-# # Define functions necessary to compute influence function stuff
-# 
-# # Just for testing
-# draw <- mp_opt
-# beta <- c(1.2, 2.0)
-# 
-# GetBetaLogPrior <- function(beta, pp) {
-#   # You can't use the VB priors because they are
-#   # (1) a function of the natural parameters whose variance would have to be zero and
-#   # (2) not normalized.
-#   dmvnorm(beta, mean=pp$beta_loc, sigma=solve(pp$beta_info), log=TRUE)
-# }
-# 
-# 
-# GetBetaLogDensity <- function(beta, vp_opt, draw, pp, unconstrained, calculate_gradient) {
-#   draw$beta_e_vec <- beta
-#   draw$beta_e2_vec <- beta %*% t(beta)
-#   opt$calculate_gradient <- calculate_gradient
-#   opt$calculate_hessian <- FALSE
-#   q_derivs <- GetLogVariationalDensityDerivatives(draw, vp_opt, opt, global_only=TRUE,
-#                                                   include_beta=TRUE, include_mu=FALSE, include_tau=FALSE)
-#   return(q_derivs)
-# }
-# 
-# 
-# # You could also do this more numerically stably with a Cholesky decomposition.
-# lrvb_pre_factor <- -1 * lrvb_results$jac %*% solve(lrvb_results$elbo_hess)
-# 
-# # Proposals based on q
-# u_mean <- mp_opt$beta_e_vec
-# # Increase the covariance for sampling.  How much is enough?
-# u_cov <- (1.5 ^ 2) * solve(vp_opt$beta_info)
-# GetULogDensity <- function(beta) {
-#   dmvnorm(beta, mean=u_mean, sigma=u_cov, log=TRUE)
-# }
-# 
-# 
-# DrawU <- function(n_samples) {
-#   rmvnorm(n_samples, mean=u_mean, sigma=u_cov)
-# }
-# u_draws <- DrawU(n_samples)
-# 
-# 
-# GetLogPrior <- function(u) {
-#   GetBetaLogPrior(u, pp)
-# }
-# 
-# 
-# mp_draw <- mp_opt
-# log_q_grad <- rep(0, vp_indices$encoded_size)
-# GetLogVariationalDensity <- function(u) {
-#   beta_q_derivs <- GetBetaLogDensity(u, vp_opt, mp_draw, pp, TRUE, TRUE)
-#   log_q_grad[global_mask] <- beta_q_derivs$grad
-#   list(val=beta_q_derivs$val, grad=log_q_grad)
-# }
-# 
-# GetLogVariationalDensity(beta)
-# 
-# GetInfluenceFunctionSample <- GetInfluenceFunctionSampleFunction(
-#   GetLogVariationalDensity, GetLogPrior, GetULogDensity, lrvb_pre_factor)
-# 
-# GetInfluenceFunctionSample(u_draws[1, ])
-# 
-# influence_list <- list()
-# pb <- txtProgressBar(min=1, max=nrow(u_draws), style=3)
-# for (ind in 1:nrow(u_draws)) {
-#   setTxtProgressBar(pb, ind)
-#   influence_list[[ind]] <- GetInfluenceFunctionSample(u_draws[ind, ])
-# }
-# close(pb)
-# 
-# 
-# names(influence_list[[1]])
-# influence_vector_list <- lapply(influence_list, function(x) as.numeric(x$influence_function))
-# influence_matrix <- do.call(rbind, influence_vector_list)
-# 
-# mp_opt_vector <- GetMomentParameterVector(mp_opt, FALSE)
-# GetIndexRow <- function(ind, param_name) {
-#   data.frame(ind=ind, param_name=param_name, val=mp_opt_vector[ind])
-# }
-# inds  <- data.frame()
-# inds <- rbind(inds, GetIndexRow(mp_indices$beta_e_vec[1], param_name <- "E_beta1"))
-# inds <- rbind(inds, GetIndexRow(mp_indices$beta_e_vec[2], param_name <- "E_beta2"))
-# inds <- rbind(inds, GetIndexRow(mp_indices$beta_e_outer[1, 1], param_name <- "E_beta1_beta1"))
-# 
-# 
-# GetInfluenceDataFrame <- function(ind, param_name, val) {
-#   data.frame(draw=1:nrow(u_draws), beta1=u_draws[, 1], beta2=u_draws[, 2],
-#              influence=influence_matrix[, ind], param_name=param_name, val=val)
-# }
-# 
-# influence_df <- data.frame()
-# for (n in 1:nrow(inds)) {
-#   influence_df <- rbind(influence_df, GetInfluenceDataFrame(inds[n, "ind"], inds[n, "param_name"], inds[n, "val"]))
-# }
-# 
-# influence_cast <-
-#   melt(influence_df, id.vars=c("draw", "beta1", "beta2", "param_name")) %>%
-#   dcast(draw + beta1 + beta2 ~ param_name + variable) %>%
-#   mutate(var_beta1_influence = E_beta1_beta1_influence - 2 * E_beta1_val * E_beta1_influence)
-# 
-# 
-
-######################################
-# New influence functions
-
 mp_draw <- mp_opt
 log_q_grad <- rep(0, vp_indices$encoded_size)
 GetLogVariationalDensity <- function(u) {
@@ -225,129 +115,28 @@ GetLogVariationalDensity <- function(u) {
   list(val=beta_q_derivs$val, grad=log_q_grad)
 }
 
-GetBetaLogDensity <- function(beta, vp_opt, draw, pp, unconstrained, calculate_gradient) {
-  draw$beta_e_vec <- beta
-  draw$beta_e2_vec <- beta %*% t(beta)
-  opt$calculate_gradient <- calculate_gradient
-  opt$calculate_hessian <- FALSE
-  q_derivs <- GetLogVariationalDensityDerivatives(draw, vp_opt, opt, global_only=TRUE,
-                                                  include_beta=TRUE, include_mu=FALSE, include_tau=FALSE)
-  return(q_derivs)
-}
 
-
-# Get a function that converts a a draw from mu_k and a standard mvn into a draw from (mu_c | mu_k)
-# k is the conditioned component, c is the "complement", i.e. the rest
-GetConditionalMVNFunction <- function(k_ind, mvn_mean, mvn_info) {
-  mvn_sigma <- solve(mvn_info)
-  c_ind <- setdiff(1:length(mvn_mean), k_ind)
-  
-  # The scale in front of the mu_k for the mean of (mu_c | mu_k)
-  # mu_cc_sigma <- mu_sigma[c_ind, c_ind, drop=FALSE]
-  mu_kk_sigma <- mvn_sigma[k_ind, k_ind, drop=FALSE]
-  mu_ck_sigma <- mvn_sigma[c_ind, k_ind, drop=FALSE]
-  sig_cc_corr <- mu_ck_sigma %*% solve(mu_kk_sigma)
-  
-  # What to multiply by to get Cov(mu_c | mu_k)
-  mu_c_cov <- solve(mvn_info[c_ind, c_ind])
-  mu_c_scale <- t(chol(mu_c_cov))
-  
-  # Given u and a draws mu_c_std ~ Standard normal, convert mu_c_std to a draw from MVN( . | mu_k).
-  # If there are multiple mu_c_std, each draw should be in its own column.
-  GetConditionalDraw <- function(mu_k, mu_c_std) {
-    mu_c_mean <- mvn_mean[c_ind] + sig_cc_corr %*% (mu_k - mvn_mean[k_ind, drop=FALSE])
-    mu_c_scale %*% mu_c_std + matrix(rep(mu_c_mean, ncol(mu_c_std)), ncol=ncol(mu_c_std))
-  }
-}
-
-
-# Beta draws:
-GetBetaImportanceFunctions <- function(beta_comp, vp_opt, pp, lrvb_results) {
-  mp_opt <- GetMomentParametersFromNaturalParameters(vp_opt)
-
-  beta_cov <- solve(vp_opt$beta_info)
-  u_mean <- vp_opt$beta_loc[beta_comp]
-  # Increase the variance for sampling.  How much is enough?
-  u_cov <- (1.5 ^ 2) * beta_cov[beta_comp, beta_comp]
-  GetULogDensity <- function(u) {
-    dnorm(u, mean=u_mean, sd=sqrt(u_cov), log=TRUE)
-  }
-  
-  DrawU <- function(n_samples) {
-    rnorm(n_samples, mean=u_mean, sd=sqrt(u_cov))
-  }
-  
-  prior_cov <- solve(pp$beta_info)
-  GetLogPrior <- function(u) {
-    dnorm(u, mean=pp$beta_loc[beta_comp], sd=sqrt(prior_cov[beta_comp, beta_comp]), log=TRUE)
-  }
-  
-  GetLogPriorVec <- function(u_vec) {
-    GetLogPrior(u_vec)
-  }
-  
-  # This is the marginal density of the beta_comp component.
-  GetLogVariationalDensity <- function(u) {
-    return(dnorm(u, mean=vp_opt$beta_loc[beta_comp], sd=sqrt(beta_cov[beta_comp, beta_comp]), log=TRUE))
-  }
-
-  # This is the density and derivatives of the full beta density.  
-  mp_draw <- mp_opt
-  log_q_grad <- rep(0, vp_indices$encoded_size)
-  GetFullBetaLogVariationalDensity <- function(u) {
-    beta_q_derivs <- GetBetaLogDensity(u, vp_opt, mp_draw, pp, TRUE, TRUE)
-    log_q_grad[global_mask] <- beta_q_derivs$grad
-    list(val=beta_q_derivs$val, grad=log_q_grad)
-  }
-  
-  GetFullLogQGradTerm <- function(beta) {
-    beta_log_q_derivs <- GetFullBetaLogVariationalDensity(beta)
-    return(as.numeric(beta_log_q_derivs$grad))
-  }
-
-  lrvb_pre_factor <- -1 * lrvb_results$jac %*% solve(lrvb_results$elbo_hess)
-  DrawConditionalBeta <- GetConditionalMVNFunction(beta_comp, vp_opt$beta_loc, vp_opt$beta_info)
-  GetLogQGradTerms <- function(u_draws, num_mc_draws) {
-    # The dimensions of beta_u_draws are (component, u draw, mc draw)
-    beta_u_draws <- array(NaN, dim=c(vp_opt$k_reg, length(u_draws), num_mc_draws))
-    c_ind <- setdiff(1:vp_opt$k_reg, beta_comp)
-    beta_std_draws <- rmvnorm(num_mc_draws, mean=rep(0, vp_opt$k - 1))
-    
-    # Draws from the rest of beta (beta "complement") given u_draws.
-    beta_cond_draws <- sapply(u_draws, function(u) DrawConditionalBeta(u, t(beta_std_draws)))
-    beta_u_draws[c_ind,, ] <- t(beta_cond_draws)
-    beta_u_draws[beta_comp,, ] <- rep(u_draws, num_mc_draws)
-
-    # The dimensions of lrvb_term_draws work out to be c(moment index, u draw, conditional beta draw)
-    lrvb_term_draws <- apply(beta_u_draws, MARGIN=c(2, 3), FUN=GetFullLogQGradTerm)
-    lrvb_term_e <- apply(lrvb_term_draws, MARGIN=c(1, 2), FUN=mean)
-    lrvb_terms <- lrvb_pre_factor %*% lrvb_term_e
-    
-    if (FALSE) {
-      u_draws_flat <- rep(u_draws, num_mc_draws)
-      ind <- mp_indices$beta_e_vec[beta_comp]
-      ggplot() +
-        geom_point(aes(x=u_draws_flat, y=as.numeric(lrvb_term_draws[ind, , ]), color="draw")) +
-        geom_line(aes(x=u_draws, y=lrvb_term_e[ind, ], color="e"))
-      ggplot() +
-        geom_line(aes(x=u_draws, y=lrvb_terms[ind, ], color="e")) +
-        geom_line(aes(x=u_draws, y=u_draws - mean(u_draws), color="u"))
-    }
-
-    return(lrvb_terms)
-  }
-  
-  return(list(GetULogDensity=GetULogDensity,
-              DrawU=DrawU,
-              GetLogPrior=GetLogPrior,
-              GetLogPriorVec=GetLogPriorVec,
-              GetLogVariationalDensity=GetLogVariationalDensity,
-              GetLogQGradTerms=GetLogQGradTerms))
-}
-
-
-beta_funs <- GetBetaImportanceFunctions(1, vp_opt, pp, lrvb_results)
-
+# beta_funs <- GetBetaImportanceFunctions(beta_comp, vp_opt, pp, lrvb_results)
+# 
+# # For debugging
+# num_draws = 500
+# num_mc_draws = 20
+# DrawImportanceSamples = beta_funs$DrawU
+# GetImportanceLogProb = beta_funs$GetULogDensity
+# GetLogQGradTerms = beta_funs$GetLogQGradTerms
+# GetLogQ = beta_funs$GetLogVariationalDensity
+# GetLogPrior = beta_funs$GetLogPrior
+# 
+# u_draws <- DrawImportanceSamples(num_draws)
+# 
+# log_prior <- sapply(u_draws, GetLogPrior)
+# log_q <- sapply(u_draws, GetLogQ)
+# importance_lp <- sapply(u_draws, GetImportanceLogProb)
+# 
+# importance_lp_ratio <- log_prior - importance_lp
+# influence_lp_ratio <- log_q - log_prior
+# log_q_grad_terms <- GetLogQGradTerms(u_draws, num_mc_draws)
+# 
 
 GetVariationalInfluenceResults <- function(
   num_draws,
@@ -391,6 +180,9 @@ GetVariationalInfluenceResults <- function(
 }
 
 
+beta_comp <- 1
+beta_funs <- GetBetaImportanceFunctions(beta_comp, vp_opt, pp, lrvb_results)
+
 beta_influence_results <- GetVariationalInfluenceResults(
   num_draws = 500,
   num_mc_draws = 20,
@@ -401,20 +193,57 @@ beta_influence_results <- GetVariationalInfluenceResults(
   GetLogPrior = beta_funs$GetLogPrior)
 
 
-ggplot() +
-  geom_point(aes(x=beta_influence_results$u_draws, y=beta_influence_results$log_q_grad_terms[1, ])) +
-  geom_point(aes(x=beta_influence_results$u_draws, y=exp(beta_influence_results$log_q), color="q")) +
-  geom_point(aes(x=beta_influence_results$u_draws, y=exp(beta_influence_results$log_prior), color="prior")) 
+draws_mat <- vb_results$draws_mat
+param_draws <- draws_mat[, beta_comp]
+mcmc_funs <- GetMCMCInfluenceFunctions(param_draws, beta_funs$GetLogPriorVec)
+mcmc_worst_case <- sapply(1:ncol(draws_mat), function(ind) { mcmc_funs$GetMCMCWorstCase(draws_mat[, ind]) })
 
-# +
-#   geom_point(aes(x=beta_influence_results$u_draws,
-#                  y=beta_influence_results$log_q_grad_terms[1, ] * exp(beta_influence_results$log_q - beta_influence_results$log_prior), color="inf"))
+worst_case_df <- rbind(
+  SummarizeVBResults(GetMomentParametersFromVector(mp_opt, mcmc_worst_case, FALSE),
+                     method="mcmc", metric=paste("beta", beta_comp, sep="")),
+  SummarizeVBResults(GetMomentParametersFromVector(mp_opt, beta_influence_results$worst_case, FALSE),
+                     method="lrvb", metric=paste("beta", beta_comp, sep=""))
+)
 
-ggplot() +
-  geom_point(aes(x=beta_influence_results$u_draws, y=beta_influence_results$influence_fun[, 1]))
+worst_case_cast <- dcast(worst_case_df, par + component + group + metric ~ method, value.var="val")
+ggplot(worst_case_cast) +
+  geom_point(aes(x=mcmc, y=lrvb, color=par)) +
+  geom_abline(aes(slope=1, intercept=0)) +
+  expand_limits(x=0, y=0)
 
+ind <- mp_indices$beta_e_vec[beta_comp]
+ind <- mp_indices$beta_e_vec[2]
+
+mcmc_influence <- mcmc_funs$GetMCMCInfluence(g_draws=draws_mat[, ind])
+mcmc_conditional_mean_diff <- mcmc_funs$GetConditionalMeanDiff(g_draws=draws_mat[, ind])
+
+grid.arrange(
+  ggplot() +
+    geom_line(aes(x=beta_influence_results$u_draws, y=beta_influence_results$influence_fun[, ind], color="lrvb")) +
+    geom_line(aes(x=param_draws, y=mcmc_influence, color="mcmc"))
+,  
+  ggplot() +
+    geom_line(aes(x=beta_influence_results$u_draws, y=exp(beta_influence_results$log_q), color="lrvb")) +
+    geom_line(aes(x=param_draws, y=mcmc_funs$dens_at_draws$y, color="mcmc"))
+ , 
+  ggplot() +
+    geom_line(aes(x=beta_influence_results$u_draws, y=beta_influence_results$log_q_grad_terms[ind, ], color="lrvb")) +
+    geom_line(aes(x=param_draws, y=mcmc_conditional_mean_diff, color="mcmc"))
+  , ncol=3
+)
+
+g_draws <- draws_mat[, ind]
 ggplot() +
-  geom_point(aes(x=beta_influence_results$u_draws, y=exp(beta_influence_results$log_q)))
+  geom_point(aes(x=param_draws, y=g_draws, color="draws"), alpha=0.3, size=2) +
+  geom_line(aes(x=param_draws, y=mcmc_conditional_mean_diff + mean(g_draws), color="mcmc"), lwd=3) +
+  geom_line(aes(x=beta_influence_results$u_draws, y=beta_influence_results$log_q_grad_terms[ind, ]+ mean(g_draws), color="lrvb"), lwd=3)
+  
+mean(g_draws)
+mp_opt$beta_e_vec[2]
+
+mcmc_worst_case[ind]
+beta_influence_results$worst_case[ind]
+
 
 #############################
 # Unpack the results.
