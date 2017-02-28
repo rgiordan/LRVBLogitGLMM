@@ -107,12 +107,46 @@ prior_sens_cast <- dcast(
 ##################
 # Influence functions
 
+draws_mat <- vb_results$draws_mat
+worst_case_list <- list()
+for (beta_comp in 1:vp_opt$k_reg) {
+  cat("beta_comp ", beta_comp, "\n")
+  beta_funs <- GetBetaImportanceFunctions(beta_comp, vp_opt, pp, lrvb_results)
+  num_mc_draws <- 10
+  beta_influence_results <- GetVariationalInfluenceResults(
+    num_draws = 200,
+    DrawImportanceSamples = beta_funs$DrawU,
+    GetImportanceLogProb = beta_funs$GetULogDensity,
+    GetLogQGradTerms = function(u_draws) { beta_funs$GetLogQGradTerms(u_draws, num_mc_draws, normalize=TRUE) },
+    GetLogQ = beta_funs$GetLogVariationalDensity,
+    GetLogPrior = beta_funs$GetLogPrior)
+  
+  
+  # Get MCMC worst-case
+  param_draws <- draws_mat[, beta_comp]
+  mcmc_funs <- GetMCMCInfluenceFunctions(param_draws, beta_funs$GetLogPrior)
+  GetMCMCWorstCaseColumn <- function(col) { mcmc_funs$GetMCMCWorstCase(draws_mat[, col]) }
+  mcmc_worst_case <- sapply(1:ncol(draws_mat), GetMCMCWorstCaseColumn)
+  
+  # Compare
+  worst_case_list[[length(worst_case_list) + 1]] <- rbind(
+    SummarizeVBResults(GetMomentParametersFromVector(mp_opt, mcmc_worst_case, FALSE),
+                       method="mcmc", metric=paste("beta", beta_comp, sep="")),
+    SummarizeVBResults(GetMomentParametersFromVector(mp_opt, beta_influence_results$worst_case, FALSE),
+                       method="lrvb", metric=paste("beta", beta_comp, sep=""))
+  )
+}
+
+worst_case_df <- do.call(rbind, worst_case_list)
+
+
+
+###################################
+# Get graphs of influence functions
 beta_comp <- 1
 beta_funs <- GetBetaImportanceFunctions(beta_comp, vp_opt, pp, lrvb_results)
-
-num_mc_draws <- 5
 beta_influence_results <- GetVariationalInfluenceResults(
-  num_draws = 2000,
+  num_draws = 200,
   DrawImportanceSamples = beta_funs$DrawU,
   GetImportanceLogProb = beta_funs$GetULogDensity,
   GetLogQGradTerms = function(u_draws) { beta_funs$GetLogQGradTerms(u_draws, num_mc_draws, normalize=TRUE) },
@@ -121,23 +155,10 @@ beta_influence_results <- GetVariationalInfluenceResults(
 
 
 # Get MCMC worst-case
-draws_mat <- vb_results$draws_mat
-param_draws <- draws_mat[, beta_comp]
+param_draws <- draws_mat[, mp_indices$beta_e_vec[beta_comp]]
 mcmc_funs <- GetMCMCInfluenceFunctions(param_draws, beta_funs$GetLogPrior)
 GetMCMCWorstCaseColumn <- function(col) { mcmc_funs$GetMCMCWorstCase(draws_mat[, col]) }
 mcmc_worst_case <- sapply(1:ncol(draws_mat), GetMCMCWorstCaseColumn)
-
-# Compare
-worst_case_df <- rbind(
-  SummarizeVBResults(GetMomentParametersFromVector(mp_opt, mcmc_worst_case, FALSE),
-                     method="mcmc", metric=paste("beta", beta_comp, sep="")),
-  SummarizeVBResults(GetMomentParametersFromVector(mp_opt, beta_influence_results$worst_case, FALSE),
-                     method="lrvb", metric=paste("beta", beta_comp, sep=""))
-)
-
-
-###################################
-# Get graphs of influence functions
 
 GetInfluenceDF <- function(u, influence, gbar, log_posterior, log_prior, worst_u, method, metric) {
   data.frame(u=u, influence=influence, gbar=gbar,
@@ -173,10 +194,85 @@ vb_influence_df <- GetInfluenceDF(
   method="lrvb",
   metric=metric)
 
+if (FALSE) {
+  grid.arrange(
+    ggplot() +
+      geom_line(data=vb_influence_df, aes(x=u, y=influence, color=method), lwd=2) +
+      geom_line(data=mcmc_influence_df, aes(x=u, y=influence, color=method), lwd=2) 
+    , 
+    ggplot() +
+      geom_line(data=vb_influence_df, aes(x=u, y=gbar, color=method), lwd=2) +
+      geom_line(data=mcmc_influence_df, aes(x=u, y=gbar, color=method), lwd=2) 
+    , 
+    ggplot() +
+      geom_line(data=vb_influence_df, aes(x=u, y=exp(log_posterior), color=method), lwd=2) +
+      geom_line(data=mcmc_influence_df, aes(x=u, y=exp(log_posterior), color=method), lwd=2) +
+      geom_line(data=vb_influence_df, aes(x=u, y=exp(log_prior), color="prior"), lwd=2) +
+      geom_line(data=mcmc_influence_df, aes(x=u, y=exp(log_prior), color="prior"), lwd=2) 
+    , ncol=3
+  )
+}
+
 
 #############################
 # Unpack the results.
 
+StanParToMomentParams <- function(par, bracket=TRUE) {
+  par_mp <- GetMomentParametersFromVector(mp_opt, rep(NaN, mp_opt$encoded_size), unconstrained=TRUE)
+  if (bracket) {
+    beta <- par[sprintf("beta[%d]", 1:vp_opt$k_reg)]
+    u <- par[sprintf("u[%d]", 1:vp_opt$n_groups)]
+  } else {
+    beta <- par[sprintf("beta.%d", 1:vp_opt$k_reg)]
+    u <- par[sprintf("u.%d", 1:vp_opt$n_groups)]
+  }
+  mu <- par["mu"]
+  tau <- par["tau"]
+  par_mp$beta_e_vec <- beta
+  par_mp$beta_e_outer <- beta %*% t(beta)
+  par_mp$mu_e <- mu
+  par_mp$mu_e2 <- mu^2
+  par_mp$tau_e <- tau
+  par_mp$tau_e_log <- log(tau)
+  for (g in 1:(vp_opt$n_groups)) {
+    par_mp$u[[g]]$u_e <- u[g]
+    par_mp$u[[g]]$u_e2 <- u[g]^2
+  }
+  return(par_mp)  
+}
+
+# The MAP estimate
+stan_map <- vb_results$stan_results$stan_map 
+map_mp <- StanParToMomentParams(stan_map$par)
+inv_hess_diag <- -diag(solve(stan_map$hessian))
+map_sd_mp <- StanParToMomentParams(sqrt(inv_hess_diag), bracket=FALSE)
+# If we wanted the sds of the squares or log, we'd need a delta method.  Not needed, though.
+map_sd_mp$beta_e_outer[] <- NaN
+map_sd_mp$tau_e_log <- NaN
+map_sd_mp$mu_e2 <- NaN
+for (g in 1:(vp_opt$n_groups)) {
+  map_sd_mp$u[[g]]$u_e2 <- NaN
+}
+
+map_results <- rbind(
+  SummarizeVBResults(map_mp, "map", "mean"),
+  SummarizeVBResults(map_var_mp, "map", "sd"))
+
+# The truth
+true_params <- vb_results$stan_results$true_params
+true_mp <- GetMomentParametersFromVector(mp_opt, rep(NaN, mp_opt$encoded_size), unconstrained=TRUE)
+true_mp$beta_e_vec <- true_params$beta
+true_mp$beta_e_outer <- true_params$beta %*% t(true_params$beta)
+true_mp$mu_e <- true_params$mu
+true_mp$mu_e2 <- true_params$mu^2
+true_mp$tau_e <- true_params$tau
+true_mp$tau_e_log <- log(true_params$tau)
+for (g in 1:(vp_opt$n_groups)) {
+  true_mp$u[[g]]$u_e <- true_params$u[[g]]
+  true_mp$u[[g]]$u_e2 <- true_params$u[[g]]^2
+}
+
+# MCMC and VB
 mcmc_sample <- extract(vb_results$stan_results$stan_sim)
 lrvb_cov <- vb_results$lrvb_results$lrvb_cov
 mfvb_cov <- GetCovariance(vp_opt)
@@ -184,7 +280,10 @@ vp_mom <- GetMomentParametersFromNaturalParameters(vp_opt)
 lrvb_sd <- GetMomentParametersFromVector(vp_mom, sqrt(diag(lrvb_cov)), FALSE)
 mfvb_sd <- GetMomentParametersFromVector(vp_mom, sqrt(diag(mfvb_cov)), FALSE)
 
-results <- SummarizeResults(mcmc_sample, vp_mom, mfvb_sd, lrvb_sd)
+results <-
+  rbind(SummarizeResults(mcmc_sample, vp_mom, mfvb_sd, lrvb_sd),
+        SummarizeVBResults(true_mp, "truth", "mean"),
+        map_results)
 
 if (save_results) {
   mcmc_time <- as.numeric(vb_results$stan_results$mcmc_time, units="secs")
@@ -242,15 +341,25 @@ worst_case_cast <- dcast(worst_case_df, par + component + group + metric ~ metho
 ggplot(worst_case_cast) +
   geom_point(aes(x=mcmc, y=lrvb, color=par, shape=factor(component)), size=2) +
   geom_abline(aes(slope=1, intercept=0)) +
-  expand_limits(x=0, y=0)
+  expand_limits(x=0, y=0) +
+  facet_grid( ~ metric)
 
 # Overall
+ggplot(
+  filter(results, metric == "mean") %>%
+    dcast(par + component + group ~ method, value.var="val") %>%
+    mutate(is_u = par == "u")) +
+  geom_point(aes(x=truth, y=mcmc, shape=par, color="mcmc"), size=3) +
+  geom_point(aes(x=truth, y=mfvb, shape=par, color="mfvb"), size=3) +
+  geom_point(aes(x=truth, y=map, shape=par, color="map"), size=3) +
+  geom_abline(aes(intercept=0, slope=1)) +
+  facet_grid(~ is_u)
+
 
 ggplot(
   filter(results, metric == "mean") %>%
     dcast(par + component + group ~ method, value.var="val") %>%
-    mutate(is_u = par == "u")
-) +
+    mutate(is_u = par == "u")) +
   geom_point(aes(x=mcmc, y=mfvb, color=par), size=3) +
   geom_abline(aes(intercept=0, slope=1)) +
   facet_grid(~ is_u)

@@ -130,30 +130,22 @@ stan_dat$mu_prior_epsilon <- 0
 stan_sim <- sampling(model, data=stan_dat, seed=seed, iter=iters, chains=1)
 mcmc_time <- Sys.time() - mcmc_time
 
-# Sample with a few values of epsilon.
-# stan_dat_eps1 <- stan_dat
-# stan_dat_eps1$mu_prior_epsilon <- 1
-# stan_sim_eps1 <- sampling(model, data=stan_dat_eps1, seed=seed, iter=iters, chains=1)
-# 
-# # Ensure a difference.
-# print(stan_sim, c("mu", "beta"))
-# print(stan_sim_eps1, c("mu", "beta"))
-
-# # Sample with a few values of epsilon.
-# stan_dat_eps0_1 <- stan_dat
-# stan_dat_eps0_1$mu_prior_epsilon <- 0.1
-# stan_sim_eps0_1 <- sampling(model, data=stan_dat_eps0_1, seed=seed, iter=iters, chains=1)
-
 # Sample with advi
 stan_advi <- vb(model, data=stan_dat,  algorithm="meanfield", output_samples=iters)
-# stan_advi_full <- vb(model, data=stan_dat,  algorithm="fullrank", output_samples=iters) # This is the same. :(
+
+# Get a MAP estimate
+stan_map <- optimizing(model, data=stan_dat, algorithm="Newton", hessian=TRUE, tol_obj=1e-12, tol_grad=1e-12, tol_param=1e-12)
+stan_map_bfgs <- optimizing(model, data=stan_dat, algorithm="BFGS", hessian=TRUE, tol_obj=1e-12, tol_grad=1e-12, tol_param=1e-12)
+
+max(eigen(stan_map$hessian)$values)
+max(eigen(stan_map_bfgs$hessian)$values)
+max(abs(stan_map$par - stan_map_bfgs$par))
+stan_map$par
 
 data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
 stan_draws_file <- file.path(data_directory, paste(analysis_name, "_mcmc_draws.Rdata", sep=""))
 save(stan_sim, mcmc_time, stan_dat,
-     # stan_dat_eps1, stan_sim_eps1, 
-     # stan_dat_eps0_1, stan_sim_eps0_1,
-     stan_advi,
+     stan_advi, stan_map,
      true_params, pp, file=stan_draws_file)
 
 
