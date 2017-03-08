@@ -386,6 +386,17 @@ ggplot(
   geom_abline(aes(intercept=0, slope=1))
 
 
+ggplot(
+  filter(results, metric == "sd", par != "u") %>%
+    dcast(par + component + group ~ method, value.var="val")
+) +
+  geom_point(aes(x=mcmc, y=map, color="map", shape=par), size=3) +
+  expand_limits(x=0, y=0) +
+  xlab("MCMC (ground truth)") + ylab("MAP") +
+  scale_color_discrete(guide=guide_legend(title="Method")) +
+  geom_abline(aes(intercept=0, slope=1))
+
+
 # Sensitivity
 
 ggplot(filter(prior_sens_cast, par != "u")) +
