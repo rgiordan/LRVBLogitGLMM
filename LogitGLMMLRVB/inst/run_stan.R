@@ -19,9 +19,9 @@ set.seed(42)
 # Simualate some data
 
 if (analysis_name == "simulated_data_large") {
-  n_obs_per_group <- 10
-  k_reg <- 10
-  n_groups <- 1000
+  n_obs_per_group <- 20
+  k_reg <- 25
+  n_groups <- 500
   n_obs <- n_groups * n_obs_per_group
   
   set.seed(42)
@@ -33,7 +33,7 @@ if (analysis_name == "simulated_data_large") {
   true_params$mu <- -3.5
   true_params$beta <- 1:k_reg
 
-  iters <- 2000
+  iters <- 8000
 } else if (analysis_name == "simulated_data_small") {
   n_obs_per_group <- 10
   k_reg <- 5
@@ -59,7 +59,11 @@ for (g in 1:n_groups) {
   true_params$u[[g]] <- rnorm(1, true_params$mu, 1 / sqrt(true_params$tau))
 }
 
-x <- matrix(runif(n_obs * k_reg), nrow=n_obs, ncol=k_reg)
+# x <- matrix(runif(n_obs * k_reg), nrow=n_obs, ncol=k_reg)
+
+# Select correlated regressors to induce posterior correlation in beta.
+x_cov <- (matrix(0.5, k_reg, k_reg) + diag(k_reg)) / 2.5
+x <- rmvnorm(n_obs, sigma=x_cov)
 
 # y_g is expected to be zero-indexed.
 y_g <- as.integer(rep(1:n_groups, each=n_obs_per_group) - 1)
@@ -76,9 +80,9 @@ y <- rbinom(n=n_obs, size=1, prob=inv.logit(true_offsets))
 pp <- GetEmptyPriorParameters(k_reg)
 
 pp$beta_loc <- rep(0, k_reg)
-pp$beta_info <- diag(k_reg)
+pp$beta_info <- 0.01 * diag(k_reg)
 pp$mu_loc <- 0
-pp$mu_info <- 1
+pp$mu_info <- 0.01
 pp$tau_alpha <- 3
 pp$tau_beta <- 3
 
@@ -131,11 +135,18 @@ stan_sim <- sampling(model, data=stan_dat, seed=seed, iter=iters, chains=1)
 mcmc_time <- Sys.time() - mcmc_time
 
 # Sample with advi
+advi_time <- Sys.time()
 stan_advi <- vb(model, data=stan_dat,  algorithm="meanfield", output_samples=iters)
+advi_time <- Sys.time() - advi_time
 
 # Get a MAP estimate
+map_time <- Sys.time()
 stan_map <- optimizing(model, data=stan_dat, algorithm="Newton", hessian=TRUE, tol_obj=1e-12, tol_grad=1e-12, tol_param=1e-12)
+map_time <- map_time - Sys.time()
+
+bfgs_map_time <- Sys.time()
 stan_map_bfgs <- optimizing(model, data=stan_dat, algorithm="BFGS", hessian=TRUE, tol_obj=1e-12, tol_grad=1e-12, tol_param=1e-12)
+bfgs_map_time <- bfgs_map_time - Sys.time()
 
 max(eigen(stan_map$hessian)$values)
 max(eigen(stan_map_bfgs$hessian)$values)
@@ -146,6 +157,7 @@ data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
 stan_draws_file <- file.path(data_directory, paste(analysis_name, "_mcmc_draws.Rdata", sep=""))
 save(stan_sim, mcmc_time, stan_dat,
      stan_advi, stan_map,
+     advi_time, map_time, bfgs_map_time,
      true_params, pp, file=stan_draws_file)
 
 

@@ -99,8 +99,16 @@ prior_sens_df <- rbind(
   UnpackPriorSensitivityMatrix(prior_sens_mcmc_norm_small, pp_indices, method="mcmc_norm_small"),
   UnpackPriorSensitivityMatrix(prior_sens_mcmc_norm_sd, pp_indices, method="mcmc_norm_small_sd"))
 
+# Aggregate across different prior components.  This analysis treats each prior component
+# separately, but it's easier to graph and understand if when we change one component of beta_loc or
+# beta_info we change all of them.
+prior_sens_agg <- prior_sens_df %>%
+  filter(k2 == -1 | k1 == k2) %>% # Remove the off-diagonal beta_info sensitivities.
+  ungroup() %>% group_by(par, component, group, method, metric, prior_par) %>%
+  summarize(val=sum(val))
+
 prior_sens_cast <- dcast(
-  prior_sens_df, par + component + group + prior_par + k1 + k2 + metric ~ method, value.var="val")
+  prior_sens_agg, par + component + group + prior_par + metric ~ method, value.var="val")
 
 
 
@@ -143,7 +151,8 @@ worst_case_df <- do.call(rbind, worst_case_list)
 
 ###################################
 # Get graphs of influence functions
-beta_comp <- 1
+
+beta_comp <- 5
 beta_funs <- GetBetaImportanceFunctions(beta_comp, vp_opt, pp, lrvb_results)
 beta_influence_results <- GetVariationalInfluenceResults(
   num_draws = 200,
@@ -169,7 +178,7 @@ GetInfluenceDF <- function(u, influence, gbar, log_posterior, log_prior, worst_u
 
 # ind <- mp_indices$beta_e_vec[beta_comp]
 # ind <- mp_indices$beta_e_vec[4]
-ind <- mp_indices$mu_e
+ind <- mp_indices$beta_e_vec[beta_comp]
 metric <- sprintf("beta%d_on_ind%d", beta_comp, ind)
 g_draws <- draws_mat[, ind]
 
@@ -256,7 +265,7 @@ for (g in 1:(vp_opt$n_groups)) {
 
 map_results <- rbind(
   SummarizeVBResults(map_mp, "map", "mean"),
-  SummarizeVBResults(map_var_mp, "map", "sd"))
+  SummarizeVBResults(map_sd_mp, "map", "sd"))
 
 # The truth
 true_params <- vb_results$stan_results$true_params
@@ -292,9 +301,11 @@ if (save_results) {
   num_logit_sims <- length(vb_results$opt$std_draws)
   num_obs <- vb_results$stan_results$stan_dat$N
   beta_dim <- vb_results$stan_results$stan_dat$K
+  elbo_hess_sparsity <- Matrix(abs(lrvb_results$elbo_hess) > 1e-8)
   save(results, prior_sens_cast, mp_opt,
        mcmc_time, vb_time, num_mcmc_draws, pp, num_logit_sims, num_obs, beta_dim,
        worst_case_df, vb_influence_df, mcmc_influence_df,
+       elbo_hess_sparsity,
        file=results_file)
 }
 
@@ -343,6 +354,7 @@ ggplot(worst_case_cast) +
   geom_abline(aes(slope=1, intercept=0)) +
   expand_limits(x=0, y=0) +
   facet_grid( ~ metric)
+
 
 # Overall
 ggplot(
