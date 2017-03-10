@@ -317,35 +317,64 @@ stop("Graphs follow -- not executing.")
 
 
 
-if (FALSE) {
-  grid.arrange(
-    ggplot() +
-      geom_line(data=vb_influence_df, aes(x=u, y=influence, color=method), lwd=2) +
-      geom_line(data=mcmc_influence_df, aes(x=u, y=influence, color=method), lwd=2) 
-    , 
-    ggplot() +
-      geom_line(data=vb_influence_df, aes(x=u, y=gbar, color=method), lwd=2) +
-      geom_line(data=mcmc_influence_df, aes(x=u, y=gbar, color=method), lwd=2) 
-    , 
-    ggplot() +
-      geom_line(data=vb_influence_df, aes(x=u, y=exp(log_posterior), color=method), lwd=2) +
-      geom_line(data=mcmc_influence_df, aes(x=u, y=exp(log_posterior), color=method), lwd=2) 
-    , ncol=3
-  )
-  
-  
-  # Look at the draws underlying the conditional expectation estimates
+grid.arrange(
   ggplot() +
-    geom_point(aes(x=param_draws, y=g_draws, color="draws"), alpha=0.3, size=2) +
-    geom_line(data=mcmc_influence_df, aes(x=u, y=gbar + mean(g_draws), color=method), lwd=2) 
+    geom_line(data=vb_influence_df, aes(x=u, y=influence, color=method), lwd=2) +
+    geom_line(data=mcmc_influence_df, aes(x=u, y=influence, color=method), lwd=2) 
+  , 
+  ggplot() +
+    geom_line(data=vb_influence_df, aes(x=u, y=gbar, color=method), lwd=2) +
+    geom_line(data=mcmc_influence_df, aes(x=u, y=gbar, color=method), lwd=2) 
+  , 
+  ggplot() +
+    geom_line(data=vb_influence_df, aes(x=u, y=exp(log_posterior), color=method), lwd=2) +
+    geom_line(data=mcmc_influence_df, aes(x=u, y=exp(log_posterior), color=method), lwd=2) 
+  , ncol=3
+)
 
-  # Look at the worst-case perturbation
-  ggplot() + 
-    geom_point(aes(x=beta_influence_results$u_draws, y=beta_influence_results$worst_case_u[, ind], color="ustar")) +
-    geom_point(aes(x=beta_influence_results$u_draws, y=exp(beta_influence_results$log_prior), color="prior"))
-  
-}
 
+# Look at the draws underlying the conditional expectation estimates
+ggplot() +
+  geom_point(aes(x=param_draws, y=g_draws, color="draws"), alpha=0.3, size=2) +
+  geom_line(data=mcmc_influence_df, aes(x=u, y=gbar + mean(g_draws), color=method), lwd=2) 
+
+# Look at the worst-case perturbation
+prior_scale <- 1 / sqrt(diag(pp$beta_info))[beta_comp]
+prior_loc <- pp$beta_loc[beta_comp]
+prior_draws <- seq(-2 * prior_scale + prior_loc, 2 * prior_scale + prior_loc, length.out=2000)
+log_prior <- beta_funs$GetLogPrior(prior_draws)
+prior_df <- data.frame(u=prior_draws, log_prior=log_prior)
+# ggplot() + 
+#   # geom_line(aes(x=beta_influence_results$u_draws, y=beta_influence_results$worst_case_u[, ind], color="ustar"), lwd=2) +
+#   geom_line(aes(x=beta_influence_results$u_draws, y=beta_influence_results$influence_fun[, ind], color="influence"), lwd=2) +
+#   geom_line(data=prior_df, aes(x=u, y=exp(log_prior), color="prior"), lwd=2)
+
+influence_approx_fun <- with(beta_influence_result, approxfun(u_draws, influence_fun[, ind]))
+prior_df$influence <- influence_approx_fun(prior_df$u)
+prior_df$influence[is.na(prior_df$influence)] <- 0
+
+log_q_approx_fun <- with(beta_influence_results, approxfun(u_draws, log_q))
+prior_df$log_q <- log_q_approx_fun(prior_df$u)
+prior_df$log_q[is.na(prior_df$log_q)] <- -Inf
+
+ustar_approx_fun <- with(beta_influence_results, approxfun(u_draws, worst_case_u[, ind]))
+prior_df$ustar <- ustar_approx_fun(prior_df$u)
+prior_df$ustar[is.na(prior_df$ustar)] <- 0
+
+grid.arrange(
+  ggplot(prior_df) + 
+    geom_line(aes(x=u, y=exp(log_prior), color="prior"), lwd=2)
+,
+  ggplot(prior_df) + 
+    geom_line(aes(x=u, y=exp(log_q), color="log_q"), lwd=2)
+,
+  ggplot(prior_df) + 
+    geom_line(aes(x=u, y=influence, color="influence"), lwd=2)
+,
+  ggplot(prior_df) + 
+    geom_line(aes(x=u, y=ustar, color="ustar"), lwd=2)
+, ncol=1
+)
 
 
 worst_case_cast <- dcast(worst_case_df, par + component + group + metric ~ method, value.var="val")
@@ -411,9 +440,15 @@ ggplot(
 
 # Sensitivity
 
+grid.arrange(
 ggplot(filter(prior_sens_cast, par != "u")) +
   geom_point(aes(x=lrvb_norm, y=mcmc_norm, color=par)) +
   geom_abline(aes(intercept=0, slope=1))
+,
+ggplot(filter(prior_sens_cast, par != "u")) +
+  geom_point(aes(x=lrvb, y=mcmc, color=par)) +
+  geom_abline(aes(intercept=0, slope=1))
+, ncol=2)
 
 # Compare LRVB with the MCMC standard deviations
 ggplot(filter(prior_sens_cast, par=="u")) +
@@ -448,25 +483,3 @@ ggplot(filter(prior_sens_cast, par=="u")) +
                     ymax=mcmc_small + 2 * mcmc_small_sd,
                     color=prior_par)) +
   geom_abline(aes(intercept=0, slope=1))
-
-
-# Influence functions
-
-p1 <- ggplot(influence_cast) +
-  geom_point(aes(x=beta1, y=beta2, color=var_beta1_influence), alpha=0.2) +
-  geom_point(aes(x=mp_opt$beta_e_vec[1], y=mp_opt$beta_e_vec[2]), color="red", size=2) +
-  ggtitle(paste("Influence of beta prior on beta1 variance")) +
-  scale_color_gradient2()
-p2 <- ggplot(influence_cast) +
-  geom_point(aes(x=beta1, y=beta2, color=E_beta1_beta1_influence), alpha=0.2) +
-  geom_point(aes(x=mp_opt$beta_e_vec[1], y=mp_opt$beta_e_vec[2]), color="red", size=2) +
-  ggtitle(paste("Influence of beta prior on beta1 beta1")) +
-  scale_color_gradient2()
-p3 <- ggplot(influence_cast) +
-  geom_point(aes(x=beta1, y=beta2, color=E_beta1_influence), alpha=0.2) +
-  geom_point(aes(x=mp_opt$beta_e_vec[1], y=mp_opt$beta_e_vec[2]), color="red", size=2) +
-  ggtitle(paste("Influence of beta prior on beta1")) +
-  scale_color_gradient2()
-grid.arrange(p1, p2, p3, nrow=1)
-
-
