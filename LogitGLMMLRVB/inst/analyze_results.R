@@ -11,6 +11,8 @@ library(mvtnorm)
 
 library(gridExtra)
 
+library(jsonlite)
+
 project_directory <-
   file.path(Sys.getenv("GIT_REPO_LOC"), "LRVBLogitGLMM")
 source(file.path(project_directory, "LogitGLMMLRVB/inst/densities_lib.R"))
@@ -33,6 +35,29 @@ mp_opt <- vb_results$mp_opt
 opt <- vb_results$opt
 pp <- vb_results$stan_results$pp
 lrvb_results <- vb_results$lrvb_results
+
+###########################
+# Read python results
+
+python_filename <- file.path(data_directory, paste(analysis_name, "_python_vb_results.json", sep=""))
+json_file <- file(python_filename, "r")
+json_dat <- fromJSON(readLines(json_file))
+close(json_file)
+
+vp_opt_py <- vp_opt
+vp_opt_py$beta_loc <- json_dat$glmm_par_opt$beta$mean
+vp_opt_py$beta_info <- solve(json_dat$glmm_par_opt$beta$cov)
+
+vp_opt_py$mu_loc <- json_dat$glmm_par_opt$mu$mean
+vp_opt_py$mu_info <- 1 / json_dat$glmm_par_opt$mu$var
+
+vp_opt_py$tau_alpha <- json_dat$glmm_par_opt$tau$shape
+vp_opt_py$tau_beta <- json_dat$glmm_par_opt$tau$rate
+
+for (g in 1:vp_opt_py$n_groups) {
+  vp_opt_py$u[[g]]$u_loc <- json_dat$glmm_par_opt$u$mean[g]
+  vp_opt_py$u[[g]]$u_info <- 1 / json_dat$glmm_par_opt$u$var[g]
+}
 
 #############################
 # Indices
