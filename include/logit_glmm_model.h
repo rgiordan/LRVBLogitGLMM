@@ -213,7 +213,7 @@ struct GroupExpectedLogLikelihoodFunctor {
 
     double encode_time;
     double lik_time;
-    double moment_time;    
+    double moment_time;
 
     VariationalNaturalParameters<T> vp(base_vp);
     begin = std::clock();
@@ -287,10 +287,10 @@ struct GroupELBOFunctor {
   template <typename T> T operator()(VectorXT<T> const &theta) const {
     // std::clock_t begin;
     // std::clock_t end;
-    // 
+    //
     // double encode_time;
     // double elbo_time;
-    // double moment_time;    
+    // double moment_time;
 
     VariationalNaturalParameters<T> vp(base_vp);
     // begin = std::clock();
@@ -318,7 +318,7 @@ struct GroupELBOFunctor {
     // elbo_time = double(end - begin) / CLOCKS_PER_SEC;
 
     // double tot_time = encode_time + moment_time + elbo_time;
-    // 
+    //
     // std::cout << "\nGroup ELBO times: " <<
     //     "encode: " << encode_time / tot_time << " " <<
     //     "moments no setting: " << moment_time / tot_time << " " <<
