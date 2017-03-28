@@ -23,6 +23,13 @@ stan_draws_file <- file.path(data_directory, paste(analysis_name, "_mcmc_draws.R
 
 stan_results <- LoadIntoEnvironment(stan_draws_file)
 
+analysis_name <- "simulated_data_small"
+#analysis_name <- "simulated_data_large"
+
+vb_results_file <- file.path(data_directory, paste(analysis_name, "_vb_results.Rdata", sep=""))
+vb_results <- LoadIntoEnvironment(vb_results_file)
+
+
 true_params <- stan_results$true_params
 x <- stan_results$stan_dat$x
 k_reg <- ncol(x)

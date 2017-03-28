@@ -17,9 +17,14 @@ stan_results$pp
 stan_results$stan_dat
 stan_dat_json <- toJSON(stan_results$stan_dat)
 
+prob <- SampleData(n_obs, k_reg, n_groups)
+vp_base <- prob$vp_nat
+vp_base_json <- toJSON(vp_base)
+
 json_filename <- file.path(data_directory, paste(analysis_name, "_stan_dat.json", sep=""))
 json_file <- file(json_filename, "w")
-write(stan_dat_json, file=json_file)
+json_list <- toJSON(list(stan_dat=stan_results$stan_dat, vp_base=vp_base))
+write(json_list, file=json_file)
 close(json_file)
 
 

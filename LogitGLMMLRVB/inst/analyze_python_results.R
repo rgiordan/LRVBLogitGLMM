@@ -13,6 +13,8 @@ library(gridExtra)
 
 library(jsonlite)
 
+# Like analyze_results, but uses the python solution.
+
 project_directory <-
   file.path(Sys.getenv("GIT_REPO_LOC"), "LRVBLogitGLMM")
 source(file.path(project_directory, "LogitGLMMLRVB/inst/densities_lib.R"))
@@ -21,9 +23,7 @@ analysis_name <- "simulated_data_small"
 #analysis_name <- "simulated_data_large"
 
 data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
-# vb_results_file <- file.path(data_directory, paste(analysis_name, "_vb_results.Rdata", sep=""))
 vb_results_file <- file.path(data_directory, paste(analysis_name, "_vb_python_results.Rdata", sep=""))
-
 
 # If true, save the results to a file readable by knitr.
 save_results <- TRUE

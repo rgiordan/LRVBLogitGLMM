@@ -619,4 +619,3 @@ Eigen::SparseMatrix<double> GetSparseELBOHessian(
 
     return hess;
 }
-
