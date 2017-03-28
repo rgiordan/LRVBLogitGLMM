@@ -85,7 +85,9 @@ for (g in 1:r_mp_indices$n_groups) {
   mp_permutation[r_mp_indices$u[[g]]$u_e2] <- py_mp_indices$e_u2[g]
 }
 
-r_vp_indices <- vp_indices <- GetNaturalParametersFromVector(vp_opt, as.numeric(1:vp_opt$encoded_size), FALSE)
+
+# Define a permutation of the variational parameter indices to map from the python indices to the R indices.
+r_vp_indices <- GetNaturalParametersFromVector(vp_opt, as.numeric(1:vp_opt$encoded_size), FALSE)
 py_vp_indices <- json_dat$vp_indices
 stopifnot(r_vp_indices$encoded_size == max(unlist(py_vp_indices)))
 
@@ -100,6 +102,56 @@ for (g in 1:r_vp_indices$n_groups) {
   vp_permutation[r_vp_indices$u[[g]]$u_loc] <- py_vp_indices$u$mean[g]
   vp_permutation[r_vp_indices$u[[g]]$u_info] <- py_vp_indices$u$info[g]
 }
+
+
+# Define a permutation of the prior parameter indices to map from the python indices to the R indices.
+r_pp_indices <- GetPriorParametersFromVector(pp, as.numeric(1:pp$encoded_size), FALSE)
+py_pp_indices <- json_dat$prior_indices
+stopifnot(r_pp_indices$encoded_size == max(unlist(py_pp_indices)))
+
+pp_permutation <- rep(NaN, r_pp_indices$encoded_size)
+pp_permutation[r_pp_indices$beta_loc] <- py_pp_indices$beta_prior_mean
+pp_permutation[r_pp_indices$beta_info] <- py_pp_indices$beta_prior_info
+pp_permutation[r_pp_indices$mu_loc] <- py_pp_indices$mu_prior_mean
+pp_permutation[r_pp_indices$mu_info] <- py_pp_indices$mu_prior_info
+pp_permutation[r_pp_indices$tau_alpha] <- py_pp_indices$tau_prior_alpha
+pp_permutation[r_pp_indices$tau_beta] <- py_pp_indices$tau_prior_beta
+
+
+###############
+# Apply the permutations to get results that are comparable to the R results
+
+lrvb_results <- list()
+lrvb_results$lrvb_cov <- json_dat$lrvb_cov[mp_permutation, mp_permutation]
+lrvb_results$jac <- json_dat$moment_jac[mp_permutation, vp_permutation]
+lrvb_results$elbo_hess <- json_dat$elbo_hess[vp_permutation, vp_permutation]
+log_prior_hess <- json_dat$log_prior_hess[pp_permutation, vp_permutation]
+
+
+#####################################
+# Draws to moments
+
+mcmc_sample <- extract(stan_results$stan_sim)
+mp_draws <- PackMCMCSamplesIntoMoments(mcmc_sample, mp_opt)
+draws_mat <- do.call(rbind, lapply(mp_draws, function(draw) GetMomentParameterVector(draw, FALSE)))
+log_prior_grad_list <- GetMCMCLogPriorDerivatives(mp_draws, pp, opt)
+log_prior_grad_mat <- do.call(rbind, log_prior_grad_list)
+
+####################################
+# Save results
+
+vb_results_file <- file.path(data_directory, paste(analysis_name, "_vb_python_results.Rdata", sep=""))
+save(stan_results, vp_opt, mp_opt, lrvb_results, opt, fit_time, log_prior_hess,
+     log_prior_grad_mat, mp_draws, draws_mat, file=vb_results_file)
+
+
+
+stop("Debugging follows")
+
+
+
+
+
 
 
 ###############
@@ -119,7 +171,7 @@ plot(solve(r_elbo_hess), solve(py_elbo_hess)); abline(0, 1)
 max(abs(r_elbo_hess - py_elbo_hess))
 
 #########
-# This is messed up
+# This was messed up due to the C++ moment parameters defaulting to unconstrained :(
 r_jac <- r_lrvb_results$jac
 py_jac <- json_dat$moment_jac[mp_permutation, vp_permutation]
 # inds <- unlist(lapply(r_mp_indices$u, function(par) par$u_e2))
@@ -182,54 +234,24 @@ r_pp_indices <- GetPriorParametersFromVector(pp, as.numeric(1:pp$encoded_size), 
 
 
 if (FALSE) {
-r_lrvb_results <- GetLRVBResults(y, y_g, x, vp_opt, pp, opt)
-plot(diag(json_dat$lrvb_cov[mp_permutation, mp_permutation]), diag(r_lrvb_results$lrvb_cov)); abline(0, 1)
-plot(json_dat$elbo_hess, r_lrvb_results$elbo_hess); abline(0, 1)
-
-r_mp_opt <- GetMomentParametersFromNaturalParameters(vp_opt)
-
+  r_lrvb_results <- GetLRVBResults(y, y_g, x, vp_opt, pp, opt)
+  plot(diag(json_dat$lrvb_cov[mp_permutation, mp_permutation]), diag(r_lrvb_results$lrvb_cov)); abline(0, 1)
+  plot(json_dat$elbo_hess, r_lrvb_results$elbo_hess); abline(0, 1)
+  
+  
+  ####################
+  # Hmm check priors
+  
+  comb_indices <- GetPriorsAndNaturalParametersFromVector(
+    vp_opt, pp, as.numeric(1:(vp_opt$encoded_size + pp$encoded_size)), FALSE)
+  comb_prior_ind <- GetPriorParametersVector(comb_indices$pp, FALSE)
+  comb_vp_ind <- GetNaturalParameterVector(comb_indices$vp, FALSE)
+  
+  opt$calculate_hessian <- TRUE
+  log_prior_derivs <- GetFullModelLogPriorDerivatives(vp_opt, pp, opt)
+  log_prior_hess <- log_prior_derivs$hess[comb_prior_ind, comb_vp_ind]
+  
+  plot(t(log_prior_hess), json_dat$log_prior_hess)
+  dim(log_prior_hess)
+  dim(json_dat$log_prior_hess)
 }
-
-
-####################
-# Hmm check priors
-
-comb_indices <- GetPriorsAndNaturalParametersFromVector(
-  vp_opt, pp, as.numeric(1:(vp_opt$encoded_size + pp$encoded_size)), FALSE)
-comb_prior_ind <- GetPriorParametersVector(comb_indices$pp, FALSE)
-comb_vp_ind <- GetNaturalParameterVector(comb_indices$vp, FALSE)
-
-opt$calculate_hessian <- TRUE
-log_prior_derivs <- GetFullModelLogPriorDerivatives(vp_opt, pp, opt)
-log_prior_hess <- log_prior_derivs$hess[comb_prior_ind, comb_vp_ind]
-
-plot(t(log_prior_hess), json_dat$log_prior_hess)
-dim(log_prior_hess)
-dim(json_dat$log_prior_hess)
-
-###############
-# Permutations
-
-lrvb_results <- list()
-lrvb_results$lrvb_cov <- json_dat$lrvb_cov[mp_permutation, mp_permutation]
-lrvb_results$jac <- json_dat$moment_jac
-lrvb_results$elbo_hess <- json_dat$elbo_hess
-log_prior_hess <- json_dat$log_prior_hess
-
-
-#####################################
-# Draws to moments
-
-mcmc_sample <- extract(stan_results$stan_sim)
-mp_draws <- PackMCMCSamplesIntoMoments(mcmc_sample, mp_opt)
-draws_mat <- do.call(rbind, lapply(mp_draws, function(draw) GetMomentParameterVector(draw, FALSE)))
-log_prior_grad_list <- GetMCMCLogPriorDerivatives(mp_draws, pp, opt)
-log_prior_grad_mat <- do.call(rbind, log_prior_grad_list)
-
-####################################
-# Save results
-
-vb_results_file <- file.path(data_directory, paste(analysis_name, "_vb_python_results.Rdata", sep=""))
-save(stan_results, vp_opt, mp_opt, lrvb_results, opt, fit_time,
-     log_prior_grad_mat, mp_draws, draws_mat, file=vb_results_file)
-

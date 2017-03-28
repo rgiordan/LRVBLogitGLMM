@@ -21,6 +21,8 @@ analysis_name <- "simulated_data_small"
 #analysis_name <- "simulated_data_large"
 
 data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
+
+# Read from R or python
 # vb_results_file <- file.path(data_directory, paste(analysis_name, "_vb_results.Rdata", sep=""))
 vb_results_file <- file.path(data_directory, paste(analysis_name, "_vb_python_results.Rdata", sep=""))
 
@@ -54,19 +56,11 @@ global_mask[global_indices] <- TRUE
 #################################
 # Parametric sensitivity analysis
 
-comb_indices <- GetPriorsAndNaturalParametersFromVector(
-  vp_opt, pp, as.numeric(1:(vp_opt$encoded_size + pp$encoded_size)), FALSE)
-comb_prior_ind <- GetPriorParametersVector(comb_indices$pp, FALSE)
-comb_vp_ind <- GetNaturalParameterVector(comb_indices$vp, FALSE)
-
 opt$calculate_hessian <- TRUE
 
-# TODO: get these from python.
-log_prior_derivs <- GetFullModelLogPriorDerivatives(vp_opt, pp, opt)
-log_prior_hess <- log_prior_derivs$hess
-log_prior_param_prior <- Matrix(log_prior_hess[comb_vp_ind, comb_prior_ind])
+log_prior_hess <- vb_results$log_prior_hess
 
-prior_sens <- -1 * lrvb_results$jac %*% Matrix::solve(lrvb_results$elbo_hess, log_prior_param_prior)
+prior_sens <- -1 * lrvb_results$jac %*% Matrix::solve(lrvb_results$elbo_hess, log_prior_hess)
 
 # Re-scaling for normalized sensitivities.
 draws_mat <- t(vb_results$draws_mat)

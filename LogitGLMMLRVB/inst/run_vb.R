@@ -120,6 +120,20 @@ stopifnot(min(diag(lrvb_cov)) > 0)
 fit_time <- Sys.time() - fit_time
 
 
+############################
+# Log prior derivatives
+
+comb_indices <- GetPriorsAndNaturalParametersFromVector(
+  vp_opt, pp, as.numeric(1:(vp_opt$encoded_size + pp$encoded_size)), FALSE)
+comb_prior_ind <- GetPriorParametersVector(comb_indices$pp, FALSE)
+comb_vp_ind <- GetNaturalParameterVector(comb_indices$vp, FALSE)
+
+opt$calculate_hessian <- TRUE
+log_prior_derivs <- GetFullModelLogPriorDerivatives(vp_opt, pp, opt)
+log_prior_hess_full <- log_prior_derivs$hess
+log_prior_hess <- Matrix(log_prior_hess_full[comb_vp_ind, comb_prior_ind])
+
+
 #####################################
 # Draws to moments
 
@@ -133,6 +147,6 @@ log_prior_grad_mat <- do.call(rbind, log_prior_grad_list)
 # Save results
 
 vb_results_file <- file.path(data_directory, paste(analysis_name, "_vb_results.Rdata", sep=""))
-save(stan_results, vp_opt, mp_opt, lrvb_results, opt, fit_time,
+save(stan_results, vp_opt, mp_opt, lrvb_results, opt, fit_time, log_prior_hess,
      log_prior_grad_mat, mp_draws, draws_mat, file=vb_results_file)
 
