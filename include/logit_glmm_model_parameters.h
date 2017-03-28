@@ -115,10 +115,10 @@ Offsets GetOffsets(VPType<T> vp) {
 template <class T>
 class VariationalMomentParameters {
 private:
-    void Initialize(int _k_reg, int _n_groups, bool _unconstrained) {
+    void Initialize(int _k_reg, int _n_groups) {
         k_reg = _k_reg;
         n_groups = _n_groups;
-        unconstrained = _unconstrained;
+        unconstrained = false;
 
         beta = MultivariateNormalMoments<T>(k_reg);
         u.resize(n_groups);
@@ -152,16 +152,16 @@ public:
   Offsets offsets;
 
   // Methods:
-  VariationalMomentParameters(int _k_reg, int _n_groups, bool _unconstrained) {
-      Initialize(_k_reg, _n_groups, _unconstrained);
+  VariationalMomentParameters(int _k_reg, int _n_groups) {
+      Initialize(_k_reg, _n_groups);
   };
 
   VariationalMomentParameters() {
-      Initialize(1, 1, true);
+      Initialize(1, 1);
   };
 
   template <typename Tnew> operator VariationalMomentParameters<Tnew>() const {
-    VariationalMomentParameters<Tnew> vp(k_reg, n_groups, unconstrained);
+    VariationalMomentParameters<Tnew> vp(k_reg, n_groups);
 
     vp.beta = beta;
     vp.tau = tau;
@@ -174,8 +174,8 @@ public:
 
     return vp;
   };
-  
-  
+
+
   // This is mostly useful for testing.
   void clear() {
     beta.e_vec = VectorXT<T>::Zero(k_reg);
@@ -256,7 +256,7 @@ public:
 
 
   operator VariationalMomentParameters<T>() const {
-    VariationalMomentParameters<T> vp_moments(k_reg, n_groups, unconstrained);
+    VariationalMomentParameters<T> vp_moments(k_reg, n_groups);
     vp_moments.beta = MultivariateNormalMoments<T>(beta);
     vp_moments.tau = GammaMoments<T>(tau);
     vp_moments.mu = UnivariateNormalMoments<T>(mu);

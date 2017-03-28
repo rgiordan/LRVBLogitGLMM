@@ -124,15 +124,12 @@ r_jac <- r_lrvb_results$jac
 py_jac <- json_dat$moment_jac[mp_permutation, vp_permutation]
 # inds <- unlist(lapply(r_mp_indices$u, function(par) par$u_e2))
 # inds <- inds[45:length(inds)]
-inds <- as.numeric(r_mp_indices$tau_e)
-r_jac[inds, ]
-py_jac[inds, ]
+inds <- 1:r_mp_indices$encoded_size
+# inds <- as.numeric(r_mp_indices$tau_e)
+# r_jac[inds, ]
+# py_jac[inds, ]
 plot(r_jac[inds, ], py_jac[inds, ]); abline(0, 1)
 plot(sort(abs(r_jac[inds, ])), sort(abs(py_jac[inds, ]))); abline(0, 1)
-plot(sort((r_jac)), sort((py_jac))); abline(0, 1)
-image(Matrix(r_jac[inds, ]))
-image(Matrix(py_jac[inds, ]))
-image(Matrix(py_jac[inds, ] - r_jac[inds, ]))
 
 
 # Calculate the R derivative numerically
@@ -162,16 +159,13 @@ hess_diff[abs(hess_diff)< 1e-6] <- 0
 hess_diff <- Matrix(hess_diff)
 image(hess_diff)
 
-hess_diff[20:25, 20:25]
-Matrix(py_elbo_hess)[20:25, 20:25]
-Matrix(r_elbo_hess)[20:25, 20:25]
-
 library(ggplot2)
 library(dplyr)
 library(reshape2)
 
 py_lrvb_cov <- json_dat$lrvb_cov[mp_permutation, mp_permutation]
 plot(diag(py_lrvb_cov), diag(r_lrvb_results$lrvb_cov)); abline(0, 1)
+plot(py_lrvb_cov, r_lrvb_results$lrvb_cov); abline(0, 1)
 # plot(diag(r_lrvb_results_orig$lrvb_cov), diag(r_lrvb_results$lrvb_cov)); abline(0, 1)
 
 cbind(diag(py_lrvb_cov), diag(r_lrvb_results$lrvb_cov))

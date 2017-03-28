@@ -160,7 +160,7 @@ ConvertMomentParametersFromList(Rcpp::List r_list) {
     int n_groups = r_list["n_groups"];
     int k_reg = r_list["k_reg"];
 
-    VariationalMomentParameters<double> vp(k_reg, n_groups, true);
+    VariationalMomentParameters<double> vp(k_reg, n_groups);
     ConvertParametersFromList(vp, r_list);
     return vp;
 }
@@ -286,7 +286,8 @@ Rcpp::List GetMomentParametersFromVector(
     bool unconstrained) {
 
     VectorXd theta = r_theta;
-    VariationalMomentParameters<double> vp = ConvertMomentParametersFromList(r_vp_base);
+    VariationalMomentParameters<double> vp =
+        ConvertMomentParametersFromList(r_vp_base);
     if (theta.size() != vp.offsets.encoded_size) {
         throw std::runtime_error("Theta is the wrong size");
     }
