@@ -17,8 +17,8 @@ project_directory <-
   file.path(Sys.getenv("GIT_REPO_LOC"), "LRVBLogitGLMM")
 source(file.path(project_directory, "LogitGLMMLRVB/inst/densities_lib.R"))
 
-analysis_name <- "simulated_data_small"
-#analysis_name <- "simulated_data_large"
+# analysis_name <- "simulated_data_small"
+analysis_name <- "simulated_data_large"
 
 data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
 
@@ -56,9 +56,7 @@ global_mask[global_indices] <- TRUE
 #################################
 # Parametric sensitivity analysis
 
-opt$calculate_hessian <- TRUE
-
-log_prior_hess <- vb_results$log_prior_hess
+log_prior_hess <- t(vb_results$log_prior_hess)
 
 prior_sens <- -1 * lrvb_results$jac %*% Matrix::solve(lrvb_results$elbo_hess, log_prior_hess)
 
@@ -88,7 +86,7 @@ prior_sens_mcmc_norm_small <- draws_mat_small_norm  %*% log_prior_grad_mat_small
 prior_sens_mcmc_norm_squares <- (draws_mat_small_norm ^ 2)  %*% (log_prior_grad_mat_small ^ 2) / keep_rows
 prior_sens_mcmc_norm_sd <- sqrt(prior_sens_mcmc_norm_squares - prior_sens_mcmc_norm_small ^ 2) / sqrt(keep_rows)
 
-# Combine.
+# Combine.  This is too slow.
 prior_sens_df <- rbind(
   UnpackPriorSensitivityMatrix(prior_sens, pp_indices, method="lrvb"),
   UnpackPriorSensitivityMatrix(prior_sens_mcmc, pp_indices, method="mcmc"),
@@ -316,6 +314,60 @@ if (save_results) {
 
 stop("Graphs follow -- not executing.")
 
+# Overall
+
+ggplot(
+  filter(results, metric == "mean") %>%
+    dcast(par + component + group ~ method, value.var="val") %>%
+    mutate(is_u = par == "u")) +
+  geom_point(aes(x=mcmc, y=mfvb, color=par), size=3) +
+  geom_abline(aes(intercept=0, slope=1)) +
+  facet_grid(~ is_u)
+
+ggplot(
+  filter(results, metric == "sd") %>%
+    dcast(par + component + group ~ method, value.var="val") %>%
+    mutate(is_u = par == "u")) +
+  geom_point(aes(x=mcmc, y=mfvb, shape=par, color="mfvb"), size=3) +
+  geom_point(aes(x=mcmc, y=lrvb, shape=par, color="lrvb"), size=3) +
+  geom_abline(aes(intercept=0, slope=1)) +
+  facet_grid(~ is_u) +
+  ggtitle("Posterior standard deviations")
+
+ggplot(
+  filter(results, metric == "sd", par == "u") %>%
+    dcast(par + component + group ~ method, value.var="val")
+) +
+  geom_point(aes(x=mcmc, y=mfvb, color="mfvb"), size=3) +
+  geom_point(aes(x=mcmc, y=lrvb, color="lrvb"), size=3) +
+  expand_limits(x=0, y=0) +
+  xlab("MCMC (ground truth)") + ylab("VB") +
+  scale_color_discrete(guide=guide_legend(title="Method")) +
+  geom_abline(aes(intercept=0, slope=1))
+
+
+ggplot(
+  filter(results, metric == "sd", par != "u") %>%
+    dcast(par + component + group ~ method, value.var="val")
+) +
+  geom_point(aes(x=mcmc, y=map, color="map", shape=par), size=3) +
+  expand_limits(x=0, y=0) +
+  xlab("MCMC (ground truth)") + ylab("MAP") +
+  scale_color_discrete(guide=guide_legend(title="Method")) +
+  geom_abline(aes(intercept=0, slope=1))
+
+ggplot(
+  filter(results, metric == "mean") %>%
+    dcast(par + component + group ~ method, value.var="val") %>%
+    mutate(is_u = par == "u")) +
+  geom_point(aes(x=truth, y=mcmc, shape=par, color="mcmc"), size=3) +
+  geom_point(aes(x=truth, y=mfvb, shape=par, color="mfvb"), size=3) +
+  geom_point(aes(x=truth, y=map, shape=par, color="map"), size=3) +
+  geom_abline(aes(intercept=0, slope=1)) +
+  facet_grid(~ is_u)
+
+
+# Worst-case
 
 
 grid.arrange(
@@ -385,58 +437,6 @@ ggplot(worst_case_cast) +
   expand_limits(x=0, y=0) +
   facet_grid( ~ metric)
 
-
-# Overall
-ggplot(
-  filter(results, metric == "mean") %>%
-    dcast(par + component + group ~ method, value.var="val") %>%
-    mutate(is_u = par == "u")) +
-  geom_point(aes(x=truth, y=mcmc, shape=par, color="mcmc"), size=3) +
-  geom_point(aes(x=truth, y=mfvb, shape=par, color="mfvb"), size=3) +
-  geom_point(aes(x=truth, y=map, shape=par, color="map"), size=3) +
-  geom_abline(aes(intercept=0, slope=1)) +
-  facet_grid(~ is_u)
-
-
-ggplot(
-  filter(results, metric == "mean") %>%
-    dcast(par + component + group ~ method, value.var="val") %>%
-    mutate(is_u = par == "u")) +
-  geom_point(aes(x=mcmc, y=mfvb, color=par), size=3) +
-  geom_abline(aes(intercept=0, slope=1)) +
-  facet_grid(~ is_u)
-
-ggplot(
-  filter(results, metric == "sd") %>%
-    dcast(par + component + group ~ method, value.var="val") %>%
-    mutate(is_u = par == "u")) +
-  geom_point(aes(x=mcmc, y=mfvb, color="mfvb"), size=3) +
-  geom_point(aes(x=mcmc, y=lrvb, color="lrvb"), size=3) +
-  geom_abline(aes(intercept=0, slope=1)) +
-  facet_grid(~ is_u) +
-  ggtitle("Posterior standard deviations")
-
-ggplot(
-  filter(results, metric == "sd", par == "u") %>%
-    dcast(par + component + group ~ method, value.var="val")
-) +
-  geom_point(aes(x=mcmc, y=mfvb, color="mfvb"), size=3) +
-  geom_point(aes(x=mcmc, y=lrvb, color="lrvb"), size=3) +
-  expand_limits(x=0, y=0) +
-  xlab("MCMC (ground truth)") + ylab("VB") +
-  scale_color_discrete(guide=guide_legend(title="Method")) +
-  geom_abline(aes(intercept=0, slope=1))
-
-
-ggplot(
-  filter(results, metric == "sd", par != "u") %>%
-    dcast(par + component + group ~ method, value.var="val")
-) +
-  geom_point(aes(x=mcmc, y=map, color="map", shape=par), size=3) +
-  expand_limits(x=0, y=0) +
-  xlab("MCMC (ground truth)") + ylab("MAP") +
-  scale_color_discrete(guide=guide_legend(title="Method")) +
-  geom_abline(aes(intercept=0, slope=1))
 
 
 # Sensitivity

@@ -10,8 +10,8 @@ library(LogitGLMMLRVB)
 project_directory <-
   file.path(Sys.getenv("GIT_REPO_LOC"), "LRVBLogitGLMM")
 
-analysis_name <- "simulated_data_small"
-# analysis_name <- "simulated_data_large"
+# analysis_name <- "simulated_data_small"
+analysis_name <- "simulated_data_large"
 
 set.seed(42)
 
@@ -30,8 +30,8 @@ if (analysis_name == "simulated_data_large") {
   true_params$k_reg <- k_reg
   true_params$n_groups <- n_groups
   true_params$tau <- 1
-  true_params$mu <- -3.5
-  true_params$beta <- 1:k_reg
+  true_params$mu <- -0.5
+  true_params$beta <- (1:k_reg) / k_reg
 
   iters <- 8000
 } else if (analysis_name == "simulated_data_small") {
@@ -72,7 +72,9 @@ for (n in 1:n_obs) {
   # C++ is zero indexed but R is one indexed
   true_offsets[n] <- true_offsets[n] + true_params$u[[y_g[n] + 1]]
 }
-y <- rbinom(n=n_obs, size=1, prob=inv.logit(true_offsets))
+true_probs <- inv.logit(true_offsets)
+print(summary(true_probs))
+y <- rbinom(n=n_obs, size=1, prob=true_probs)
 
 ##########################
 # Prior parameters
