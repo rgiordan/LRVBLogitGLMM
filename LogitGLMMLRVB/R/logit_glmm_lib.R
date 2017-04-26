@@ -233,13 +233,13 @@ SummarizeVBVariableMetric <- function(vp_mom_list, method, metric, Accessor, par
 SummarizeVBResults <- function(vp_mom, method, metric) {
   k_reg <- vp_mom$k_reg
   n_groups <- vp_mom$n_groups
-  
+
   results_list <- list()
-  
+
   results_list[[length(results_list) + 1]] <-
     SummarizeVBVariableMetric(vp_mom, method=method, metric=metric, function(vp) { vp[["mu_e"]] }, par="mu")
   results_list[[length(results_list) + 1]] <-
-    SummarizeVBVariableMetric(vp_mom,method=method, metric=metric, function(vp) { vp[["tau_e"]] }, par="tau")
+    SummarizeVBVariableMetric(vp_mom, method=method, metric=metric, function(vp) { vp[["tau_e"]] }, par="tau")
   for (k in 1:k_reg) {
     results_list[[length(results_list) + 1]] <-
       SummarizeVBVariableMetric(vp_mom, method=method, metric=metric, function(vp) { vp[["beta_e_vec"]][k] },
@@ -276,7 +276,7 @@ SummarizeResults <- function(mcmc_sample, vp_mom, mfvb_sd, lrvb_sd) {
   results_list[[length(results_list) + 1]] <- SummarizeVBResults(vp_mom, method="mfvb", metric="mean")
   results_list[[length(results_list) + 1]] <- SummarizeVBResults(mfvb_sd, method="mfvb", metric="sd")
   results_list[[length(results_list) + 1]] <- SummarizeVBResults(lrvb_sd, method="lrvb", metric="sd")
-  
+
   return(do.call(rbind, results_list))
 }
 
@@ -294,12 +294,17 @@ UnpackPriorSensitivityMatrix <- function(prior_sens_mat, pp_indices, method) {
   result_list <- list()
   for (k_ind in 1:pp_indices$k_reg) {
     sens_vec <- prior_sens_mat[, pp_indices$beta_loc[k_ind]]
-    result_list[[length(result_list) + 1]] <- GetPriorSensitivityResult(sens_vec, "beta_loc", method=method, k1=k_ind)
+    result_list[[length(result_list) + 1]] <-
+        GetPriorSensitivityResult(sens_vec, "beta_loc", method=method, k1=k_ind)
   }
-  for (k_ind1 in 1:pp_indices$k_reg) { for (k_ind2 in 1:k_ind1) {
+  for (k_ind1 in 1:pp_indices$k_reg) {
+    #for (k_ind2 in 1:k_ind1) {
+    k_ind2 <- k_ind1
     sens_vec <- prior_sens_mat[, pp_indices$beta_info[k_ind1, k_ind2]]
-    result_list[[length(result_list) + 1]] <- GetPriorSensitivityResult(sens_vec, "beta_info", method=method, k1=k_ind1, k2=k_ind2)
-  }}
+    result_list[[length(result_list) + 1]] <-
+        GetPriorSensitivityResult(sens_vec, "beta_info", method=method, k1=k_ind1, k2=k_ind2)
+    #}
+  }
   result_list[[length(result_list) + 1]] <-
     GetPriorSensitivityResult(prior_sens_mat[, pp_indices$mu_loc], "mu_loc", method=method)
   result_list[[length(result_list) + 1]] <-
@@ -310,6 +315,3 @@ UnpackPriorSensitivityMatrix <- function(prior_sens_mat, pp_indices, method) {
     GetPriorSensitivityResult(prior_sens_mat[, pp_indices$tau_beta], "tau_beta", method=method)
   return(do.call(rbind, result_list))
 }
-
-
-

@@ -33,7 +33,7 @@ if (analysis_name == "simulated_data_large") {
   true_params$mu <- -0.5
   true_params$beta <- (1:k_reg) / k_reg
 
-  iters <- 8000
+  iters <- 30000
 } else if (analysis_name == "simulated_data_small") {
   n_obs_per_group <- 10
   k_reg <- 5
@@ -129,11 +129,12 @@ stan_dat <- list(NG = n_groups,
 # Some knobs we can tweak.  Note that we need many iterations to accurately assess
 # the prior sensitivity in the MCMC noise.
 seed <- 42
+chains <- 1
 
 # Draw the draws and save.
 mcmc_time <- Sys.time()
 stan_dat$mu_prior_epsilon <- 0
-stan_sim <- sampling(model, data=stan_dat, seed=seed, iter=iters, chains=1)
+stan_sim <- sampling(model, data=stan_dat, seed=seed, iter=iters, chains=chains)
 mcmc_time <- Sys.time() - mcmc_time
 
 # Sample with advi
@@ -143,12 +144,16 @@ advi_time <- Sys.time() - advi_time
 
 # Get a MAP estimate
 map_time <- Sys.time()
-stan_map <- optimizing(model, data=stan_dat, algorithm="Newton", hessian=TRUE, tol_obj=1e-12, tol_grad=1e-12, tol_param=1e-12)
-map_time <- map_time - Sys.time()
+stan_map <- optimizing(model, data=stan_dat, algorithm="Newton",
+                       init=get_inits(stan_sim)[[1]], hessian=TRUE,
+                       tol_obj=1e-12, tol_grad=1e-12, tol_param=1e-12)
+map_time <- Sys.time() - map_time
 
-bfgs_map_time <- Sys.time()
-stan_map_bfgs <- optimizing(model, data=stan_dat, algorithm="BFGS", hessian=TRUE, tol_obj=1e-12, tol_grad=1e-12, tol_param=1e-12)
-bfgs_map_time <- bfgs_map_time - Sys.time()
+# bfgs_map_time <- Sys.time()
+stan_map_bfgs <- optimizing(model, data=stan_dat, algorithm="BFGS", hessian=FALSE,
+                            init=get_inits(stan_sim)[[1]], verbose=TRUE,
+                            tol_obj=1e-12, tol_grad=1e-12, tol_param=1e-12)
+# bfgs_map_time <- bfgs_map_time - Sys.time()
 
 max(eigen(stan_map$hessian)$values)
 max(eigen(stan_map_bfgs$hessian)$values)
@@ -158,8 +163,11 @@ stan_map$par
 data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
 stan_draws_file <- file.path(data_directory, paste(analysis_name, "_mcmc_draws.Rdata", sep=""))
 save(stan_sim, mcmc_time, stan_dat,
-     stan_advi, stan_map,
-     advi_time, map_time, bfgs_map_time,
+     stan_advi,
+     stan_map,
+     advi_time,
+     map_time,
+     # bfgs_map_time,
      true_params, pp, file=stan_draws_file)
 
 
