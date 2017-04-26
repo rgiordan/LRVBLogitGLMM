@@ -34,7 +34,7 @@ if (analysis_name == "simulated_data_large") {
   true_params$mu <- -0.5
   true_params$beta <- (1:k_reg) / k_reg
 
-  iters <- 30000
+  iters <- 10000
 } else if (analysis_name == "simulated_data_small") {
   n_obs_per_group <- 10
   k_reg <- 5
@@ -131,11 +131,12 @@ stan_dat <- list(NG = n_groups,
 # the prior sensitivity in the MCMC noise.
 seed <- 42
 chains <- 4
+cores <- 4
 
 # Draw the draws and save.
 mcmc_time <- Sys.time()
 stan_dat$mu_prior_epsilon <- 0
-stan_sim <- sampling(model, data=stan_dat, seed=seed, iter=iters, chains=chains)
+stan_sim <- sampling(model, data=stan_dat, seed=seed, iter=iters, chains=chains, cores=cores)
 mcmc_time <- Sys.time() - mcmc_time
 
 # Sample with advi
@@ -151,7 +152,7 @@ advi_time <- Sys.time() - advi_time
 # map_time <- Sys.time() - map_time
 
 bfgs_map_time <- Sys.time()
-stan_map_bfgs <- optimizing(model, data=stan_dat, algorithm="BFGS", hessian=FALSE,
+stan_map_bfgs <- optimizing(model, data=stan_dat, algorithm="BFGS", hessian=TRUE,
                             init=get_inits(stan_sim)[[1]], verbose=TRUE,
                             tol_obj=1e-12, tol_grad=1e-12, tol_param=1e-12)
 bfgs_map_time <- bfgs_map_time - Sys.time()
@@ -166,6 +167,8 @@ save(stan_sim, mcmc_time, stan_dat,
      stan_map,
      advi_time,
      map_time,
+     chains,
+     cores,
      true_params, pp, file=stan_draws_file)
 
 # Save the data to a JSON file.
