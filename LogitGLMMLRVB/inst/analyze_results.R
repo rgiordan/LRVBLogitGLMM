@@ -124,7 +124,8 @@ num_mc_draws <- 10
 
 # The number of draws when evaluating the integral over the influence function.
 num_draws <- 50
-mcmc_subsample <- min(nrow(draws_mat), 10000)
+# mcmc_subsample <- min(nrow(draws_mat), 10000)
+mcmc_subsample <- nrow(draws_mat)
 num_bootstraps <- 20
 
 draws_mat <- vb_results$draws_mat
@@ -147,7 +148,7 @@ for (beta_comp in 1:influence_k) {
     
     # Get MCMC worst-case
     cat("mcmc...\n")
-    subsample_rows <- sample(1:nrow(draws_mat), mcmc_subsample, replace=FALSE)
+    subsample_rows <- sample(1:nrow(draws_mat), mcmc_subsample, replace=TRUE)
     timer <- Sys.time()
     param_draws <- draws_mat[subsample_rows, beta_comp]
     mcmc_funs <- GetMCMCInfluenceFunctions(param_draws, beta_funs$GetLogPrior)
@@ -194,18 +195,9 @@ for (row in 1:nrow(worst_case_cast)) {
 ellipse_df <- do.call(rbind, ellipse_dfs) %>%
   inner_join(mutate(worst_case_cast, row=1:nrow(worst_case_cast)), by="row")
 
-
-
-ggplot(filter(worst_case_cast, par == "u", component != 1)) +
+ggplot(filter(worst_case_cast, par != "u", component != 1)) +
+  geom_polygon(data=filter(ellipse_df, par != "u", component != 1),  aes(x=x, y=y, group=row), alpha=0.1, color=NA) +
   geom_point(aes(x=mcmc_val_mean, y=lrvb_val_mean), size=2) +
-  geom_polygon(data=filter(ellipse_df, par == "u", component != 1),  aes(x=x, y=y, group=row), alpha=0.1) +
-  geom_errorbar(aes(x=mcmc_val_mean,
-                    ymin=lrvb_val_mean - 2 * lrvb_val_sd,
-                    ymax=lrvb_val_mean + 2 * lrvb_val_sd, shape=component), alpha=0.5) +
-  geom_errorbarh(aes(x=mcmc_val_mean,
-                     y=lrvb_val_mean,
-                     xmin=mcmc_val_mean - 2 * mcmc_val_sd,
-                     xmax=mcmc_val_mean + 2 * mcmc_val_sd, shape=component), alpha=0.5) +
   geom_abline(aes(slope=1, intercept=0)) +
   expand_limits(x=0, y=0) +
   xlab("MCMC") + ylab("VB") 

@@ -6,9 +6,10 @@ library(boot) # for inv.logit
 library(Matrix)
 library(mvtnorm)
 library(LogitGLMMLRVB)
+library(jsonlite)
 
-project_directory <-
-  file.path(Sys.getenv("GIT_REPO_LOC"), "LRVBLogitGLMM")
+project_directory <- file.path(Sys.getenv("GIT_REPO_LOC"), "LRVBLogitGLMM")
+data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
 
 # analysis_name <- "simulated_data_small"
 analysis_name <- "simulated_data_large"
@@ -129,7 +130,7 @@ stan_dat <- list(NG = n_groups,
 # Some knobs we can tweak.  Note that we need many iterations to accurately assess
 # the prior sensitivity in the MCMC noise.
 seed <- 42
-chains <- 1
+chains <- 4
 
 # Draw the draws and save.
 mcmc_time <- Sys.time()
@@ -143,32 +144,60 @@ stan_advi <- vb(model, data=stan_dat,  algorithm="meanfield", output_samples=ite
 advi_time <- Sys.time() - advi_time
 
 # Get a MAP estimate
-map_time <- Sys.time()
-stan_map <- optimizing(model, data=stan_dat, algorithm="Newton",
-                       init=get_inits(stan_sim)[[1]], hessian=TRUE,
-                       tol_obj=1e-12, tol_grad=1e-12, tol_param=1e-12)
-map_time <- Sys.time() - map_time
+# map_time <- Sys.time()
+# stan_map <- optimizing(model, data=stan_dat, algorithm="Newton",
+#                        init=get_inits(stan_sim)[[1]], hessian=TRUE,
+#                        tol_obj=1e-12, tol_grad=1e-12, tol_param=1e-12)
+# map_time <- Sys.time() - map_time
 
-# bfgs_map_time <- Sys.time()
+bfgs_map_time <- Sys.time()
 stan_map_bfgs <- optimizing(model, data=stan_dat, algorithm="BFGS", hessian=FALSE,
                             init=get_inits(stan_sim)[[1]], verbose=TRUE,
                             tol_obj=1e-12, tol_grad=1e-12, tol_param=1e-12)
-# bfgs_map_time <- bfgs_map_time - Sys.time()
+bfgs_map_time <- bfgs_map_time - Sys.time()
 
-max(eigen(stan_map$hessian)$values)
-max(eigen(stan_map_bfgs$hessian)$values)
-max(abs(stan_map$par - stan_map_bfgs$par))
-stan_map$par
+stan_map <- stan_map_bfgs
+map_time <- bfgs_map_time
 
-data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
+# Save the fit to an RData file.
 stan_draws_file <- file.path(data_directory, paste(analysis_name, "_mcmc_draws.Rdata", sep=""))
 save(stan_sim, mcmc_time, stan_dat,
      stan_advi,
      stan_map,
      advi_time,
      map_time,
-     # bfgs_map_time,
      true_params, pp, file=stan_draws_file)
+
+# Save the data to a JSON file.
+stan_dat_json <- toJSON(stan_dat)
+
+prob <- SampleData(n_obs, k_reg, n_groups)
+vp_base <- prob$vp_nat
+vp_base_json <- toJSON(vp_base)
+
+vp_base$u_info_min <- 1e-3
+vp_base$beta_diag_min <- 1e-3
+vp_base$tau_alpha_min <- 1e-6
+vp_base$tau_beta_min <- 1e-6
+
+# Write the ADVI solution to a json format.
+mcmc_sample <- extract(stan_advi)
+advi_results <- list()
+advi_results$mu_mean <- mean(mcmc_sample$mu)
+advi_results$mu_var <- var(mcmc_sample$mu)
+advi_results$beta_mean <- colMeans((mcmc_sample$beta))
+advi_results$beta_info <- solve(cov((mcmc_sample$beta)))
+advi_results$u_mean <- apply(mcmc_sample$u, MARGIN=2, mean)
+advi_results$u_var <- apply(mcmc_sample$u, MARGIN=2, var)
+advi_results$tau_mean <- mean(mcmc_sample$tau)
+advi_results$tau_var <- var(mcmc_sample$tau)
+
+json_filename <- file.path(data_directory, paste(analysis_name, "_stan_dat.json", sep=""))
+json_file <- file(json_filename, "w")
+json_list <- toJSON(list(stan_dat=stan_dat, vp_base=vp_base, advi_results=advi_results))
+write(json_list, file=json_file)
+close(json_file)
+
 
 
 
