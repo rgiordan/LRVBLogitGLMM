@@ -146,7 +146,9 @@ log_prior_grad_mat <- do.call(rbind, log_prior_grad_list)
 ####################################
 # Save results
 
+num_mc_draws <- length(opt$std_draws)
+
 vb_results_file <- file.path(data_directory, paste(analysis_name, "_vb_results.Rdata", sep=""))
-save(stan_results, vp_opt, mp_opt, lrvb_results, opt, fit_time, log_prior_hess,
+save(stan_results, vp_opt, mp_opt, lrvb_results, opt, fit_time, log_prior_hess, num_mc_draws,
      log_prior_grad_mat, mp_draws, draws_mat, file=vb_results_file)
 

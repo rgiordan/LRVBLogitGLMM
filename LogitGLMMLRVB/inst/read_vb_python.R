@@ -60,6 +60,8 @@ for (g in 1:vp_opt$n_groups) {
 }
 
 fit_time <- json_dat$vb_time
+hess_time <- json_dat$hess_time
+num_mc_draws <- json_dat$num_mc_draws
 
 opt <- GetOptions(n_sim=10)
 
@@ -125,7 +127,7 @@ lrvb_results <- list()
 lrvb_results$lrvb_cov <- json_dat$lrvb_cov[mp_permutation, mp_permutation]
 lrvb_results$jac <- json_dat$moment_jac[mp_permutation, vp_permutation]
 lrvb_results$elbo_hess <- json_dat$elbo_hess[vp_permutation, vp_permutation]
-log_prior_hess <- json_dat$log_prior_hess[pp_permutation, vp_permutation]
+log_prior_hess <- t(json_dat$log_prior_hess)[pp_permutation, vp_permutation]
 
 
 #####################################
@@ -141,7 +143,7 @@ log_prior_grad_mat <- do.call(rbind, log_prior_grad_list)
 # Save results
 
 vb_results_file <- file.path(data_directory, paste(analysis_name, "_vb_python_results.Rdata", sep=""))
-save(stan_results, vp_opt, mp_opt, lrvb_results, opt, fit_time, log_prior_hess,
+save(stan_results, vp_opt, mp_opt, lrvb_results, opt, fit_time, hess_time, num_mc_draws, log_prior_hess,
      log_prior_grad_mat, mp_draws, draws_mat, file=vb_results_file)
 
 

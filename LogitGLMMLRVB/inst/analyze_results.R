@@ -56,6 +56,9 @@ global_mask[global_indices] <- TRUE
 #################################
 # Parametric sensitivity analysis
 
+# It would be better to group the beta_loc and beta_info parameters into single
+# prior parameters all at once at the beginning.
+
 log_prior_hess <- t(vb_results$log_prior_hess)
 
 prior_sens <- -1 * lrvb_results$jac %*% Matrix::solve(lrvb_results$elbo_hess, log_prior_hess)
@@ -67,6 +70,7 @@ mcmc_sd_scale <- sqrt(diag(cov(t(draws_mat))))
 
 # Get the MCMC covariance-based results
 log_prior_grad_mat <- vb_results$log_prior_grad_mat
+log_prior_grad_mat <- log_prior_grad_mat - rep(colMeans(log_prior_grad_mat), each=nrow(log_prior_grad_mat))
 draws_mat <- draws_mat - rowMeans(draws_mat)
 prior_sens_mcmc <- draws_mat %*% log_prior_grad_mat / nrow(log_prior_grad_mat)
 num_mcmc_draws <- nrow(log_prior_grad_mat)
@@ -92,8 +96,9 @@ prior_sens_mcmc_norm_sd <- sqrt(prior_sens_mcmc_norm_squares - prior_sens_mcmc_n
 # R munging that I have never bothered to tidy up.
 prior_sens_df <- rbind(
   UnpackPriorSensitivityMatrix(prior_sens / lrvb_sd_scale, pp_indices, method="lrvb_norm"),
-  UnpackPriorSensitivityMatrix(prior_sens_mcmc / mcmc_sd_scale, pp_indices, method="mcmc_norm"),
-  UnpackPriorSensitivityMatrix(prior_sens_mcmc_norm_sd, pp_indices, method="mcmc_norm_sd"))
+  UnpackPriorSensitivityMatrix(prior_sens_mcmc / mcmc_sd_scale, pp_indices, method="mcmc_norm"))
+
+prior_sens_sd_df <- UnpackPriorSensitivityMatrix(prior_sens_mcmc_norm_sd, pp_indices, method="mcmc_norm_sd")
 
 # Aggregate across different prior components.  This analysis treats each prior component
 # separately, but it's easier to graph and understand if when we change one component of beta_loc or
@@ -183,13 +188,15 @@ results <-
 if (save_results) {
   mcmc_time <- as.numeric(vb_results$stan_results$mcmc_time, units="secs")
   vb_time <- as.numeric(vb_results$fit_time, units="secs")
+  hess_time <- as.numeric(vb_results$hess_time, units="secs")
   num_mcmc_draws <- nrow(as.matrix(vb_results$stan_results$stan_sim))
-  num_logit_sims <- length(vb_results$opt$std_draws)
+  num_logit_sims <- vb_results$num_mc_draws
   num_obs <- vb_results$stan_results$stan_dat$N
   beta_dim <- vb_results$stan_results$stan_dat$K
   elbo_hess_sparsity <- Matrix(abs(lrvb_results$elbo_hess) > 1e-8)
   save(results, prior_sens_cast, mp_opt,
-       mcmc_time, vb_time, num_mcmc_draws, pp, num_logit_sims, num_obs, beta_dim,
+       mcmc_time, vb_time, num_mcmc_draws, num_mc_draws, hess_time,
+       pp, num_logit_sims, num_obs, beta_dim,
        elbo_hess_sparsity,
        file=results_file)
 }
@@ -253,105 +260,27 @@ ggplot(
   facet_grid(~ is_u)
 
 
-# Worst-case
-
-
-grid.arrange(
-  ggplot() +
-    geom_line(data=vb_influence_df, aes(x=u, y=influence, color=method), lwd=2) +
-    geom_line(data=mcmc_influence_df, aes(x=u, y=influence, color=method), lwd=2) 
-  , 
-  ggplot() +
-    geom_line(data=vb_influence_df, aes(x=u, y=gbar, color=method), lwd=2) +
-    geom_line(data=mcmc_influence_df, aes(x=u, y=gbar, color=method), lwd=2) 
-  , 
-  ggplot() +
-    geom_line(data=vb_influence_df, aes(x=u, y=exp(log_posterior), color=method), lwd=2) +
-    geom_line(data=mcmc_influence_df, aes(x=u, y=exp(log_posterior), color=method), lwd=2) 
-  , ncol=3
-)
-
-
-# Look at the draws underlying the conditional expectation estimates
-ggplot() +
-  geom_point(aes(x=param_draws, y=g_draws, color="draws"), alpha=0.3, size=2) +
-  geom_line(data=mcmc_influence_df, aes(x=u, y=gbar + mean(g_draws), color=method), lwd=2) 
-
-# Look at the worst-case perturbation
-prior_scale <- 1 / sqrt(diag(pp$beta_info))[beta_comp]
-prior_loc <- pp$beta_loc[beta_comp]
-prior_draws <- seq(-2 * prior_scale + prior_loc, 2 * prior_scale + prior_loc, length.out=2000)
-log_prior <- beta_funs$GetLogPrior(prior_draws)
-prior_df <- data.frame(u=prior_draws, log_prior=log_prior)
-# ggplot() + 
-#   # geom_line(aes(x=beta_influence_results$u_draws, y=beta_influence_results$worst_case_u[, ind], color="ustar"), lwd=2) +
-#   geom_line(aes(x=beta_influence_results$u_draws, y=beta_influence_results$influence_fun[, ind], color="influence"), lwd=2) +
-#   geom_line(data=prior_df, aes(x=u, y=exp(log_prior), color="prior"), lwd=2)
-
-influence_approx_fun <- with(beta_influence_result, approxfun(u_draws, influence_fun[, ind]))
-prior_df$influence <- influence_approx_fun(prior_df$u)
-prior_df$influence[is.na(prior_df$influence)] <- 0
-
-log_q_approx_fun <- with(beta_influence_results, approxfun(u_draws, log_q))
-prior_df$log_q <- log_q_approx_fun(prior_df$u)
-prior_df$log_q[is.na(prior_df$log_q)] <- -Inf
-
-ustar_approx_fun <- with(beta_influence_results, approxfun(u_draws, worst_case_u[, ind]))
-prior_df$ustar <- ustar_approx_fun(prior_df$u)
-prior_df$ustar[is.na(prior_df$ustar)] <- 0
-
-grid.arrange(
-  ggplot(prior_df) + 
-    geom_line(aes(x=u, y=exp(log_prior), color="prior"), lwd=2)
-,
-  ggplot(prior_df) + 
-    geom_line(aes(x=u, y=exp(log_q), color="log_q"), lwd=2)
-,
-  ggplot(prior_df) + 
-    geom_line(aes(x=u, y=influence, color="influence"), lwd=2)
-,
-  ggplot(prior_df) + 
-    geom_line(aes(x=u, y=ustar, color="ustar"), lwd=2)
-, ncol=1
-)
-
-
-worst_case_cast <- dcast(worst_case_df, par + component + group + metric ~ method, value.var="val")
-ggplot(worst_case_cast) +
-  geom_point(aes(x=mcmc, y=lrvb, color=par, shape=factor(component)), size=2) +
-  geom_abline(aes(slope=1, intercept=0)) +
-  expand_limits(x=0, y=0) +
-  facet_grid( ~ metric)
-
-
-
 # Sensitivity
 
-grid.arrange(
 ggplot(filter(prior_sens_cast, par != "u")) +
   geom_point(aes(x=lrvb_norm, y=mcmc_norm, color=par)) +
   geom_abline(aes(intercept=0, slope=1))
-,
-ggplot(filter(prior_sens_cast, par != "u")) +
-  geom_point(aes(x=lrvb, y=mcmc, color=par)) +
-  geom_abline(aes(intercept=0, slope=1))
-, ncol=2)
 
 # Compare LRVB with the MCMC standard deviations
 ggplot(filter(prior_sens_cast, par=="u")) +
-  geom_point(aes(x=lrvb_norm, y=mcmc_norm_small, color=prior_par)) +
+  geom_point(aes(x=lrvb_norm, y=mcmc_norm, color=prior_par)) +
   geom_errorbar(aes(x=lrvb_norm,
-                    ymin=mcmc_norm_small - 2 * mcmc_norm_small_sd,
-                    ymax=mcmc_norm_small + 2 * mcmc_norm_small_sd,
+                    ymin=mcmc_norm - 2 * mcmc_norm_sd,
+                    ymax=mcmc_norm + 2 * mcmc_norm_sd,
                     color=prior_par)) +
   geom_abline(aes(intercept=0, slope=1))
 
 # Compare MCMC with its own estimated standard deviations.
 ggplot(filter(prior_sens_cast, par=="u")) +
-  geom_point(aes(x=mcmc_norm, y=mcmc_norm_small, color=prior_par)) +
+  geom_point(aes(x=mcmc_norm, y=mcmc_norm, color=prior_par)) +
   geom_errorbar(aes(x=mcmc_norm,
-                    ymin=mcmc_norm_small - 2 * mcmc_norm_small_sd,
-                    ymax=mcmc_norm_small + 2 * mcmc_norm_small_sd,
+                    ymin=mcmc_norm - 2 * mcmc_norm_sd,
+                    ymax=mcmc_norm + 2 * mcmc_norm_sd,
                     color=prior_par)) +
   geom_abline(aes(intercept=0, slope=1))
 
