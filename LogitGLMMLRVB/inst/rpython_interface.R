@@ -5,9 +5,44 @@
 # https://stackoverflow.com/questions/45319387/using-rpython-import-numply-with-python-3-5
 # https://github.com/rstudio/reticulate
 install.packages("reticulate")
+library(reticulate)
+
+py_main <- py_run_string(
+"
+import sys
+import os
+print(sys.version)
+sys.path.append('/home/rgiordan/Documents/git_repos/LinearResponseVariationalBayes.py')
+sys.path.append('/home/rgiordan/Documents/git_repos/LinearResponseVariationalBayes.py/Models')
+sys.path.append('/home/rgiordan/Documents/git_repos/autograd')
+
+import VariationalBayes as vb
+import LogisticGLMM_lib as logit_glmm
+")
+
+np <- import("numpy")
+
+
+glmm_par <- py_main$logit_glmm$get_glmm_parameters(K=5, NG=10)
+
+rand_par <- array(runif(glmm_par$free_size()))
+glmm_par$set_free(rand_par)
+glmm_par
+
+
+glmm_indices <- py_main$logit_glmm$get_glmm_parameters(K=5, NG=10)
+glmm_indices$set_vector(array(seq(1, glmm_indices$vector_size())))
 
 
 
+
+
+
+
+
+
+
+#########
 # I believe this is broken:
 remove.packages("rPython")
 Sys.setenv(RPYTHON_PYTHON_VERSION=3.5)
@@ -37,6 +72,8 @@ sys.path.append('/home/rgiordan/Documents/git_repos/LinearResponseVariationalBay
 sys.path.append('/home/rgiordan/Documents/git_repos/LinearResponseVariationalBayes.py/Models')
 sys.path.append('/home/rgiordan/Documents/git_repos/autograd')
 ")
+
+
 
 python.get("sys.path")
 
