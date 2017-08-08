@@ -4,8 +4,8 @@
 
 # https://stackoverflow.com/questions/45319387/using-rpython-import-numply-with-python-3-5
 # https://github.com/rstudio/reticulate
-install.packages("reticulate")
 library(reticulate)
+library(tidyr)
 
 py_main <- py_run_string(
 "
@@ -33,17 +33,64 @@ glmm_par
 glmm_indices <- py_main$logit_glmm$get_glmm_parameters(K=5, NG=10)
 glmm_indices$set_vector(array(seq(1, glmm_indices$vector_size())))
 
+glmm_par_list <- glmm_par$dictval()
+glmm_par$param_dict$mu$mean$get()
+
+# No
+# unnest(tibble(glmm_par_list))
+
+library(purrr)
+library(dplyr)
+
+# Doesn't preserve names
+flatten(glmm_par_list)
+flatten(glmm_par_list, .id="par")
+
+lmap(glmm_par_list, flatten)
+
+# I don't know why, but these don't work.
+# flatten_dfr(glmm_par_list)
+# flatten_dfc(glmm_par_list)
 
 
+foo <- list(a=1, b=list(aa=2, bb=3), c=c(10., 11))
+flatten_dfc(foo)
 
+foo <- data.frame(a=runif(5), b=runif(5))
+bar <- data.frame(b=runif(5), c=runif(5))
+bind_rows(foo, bar)
 
+foo <- list(a=runif(4), b=runif(5))
+bar <- map(foo, function(x) { tibble(val=x) })
+flatten(bar)
+bind_rows(bar, .id="id") # This
 
+unpack_parameter <- function(par, level=0) {
+  if (is.numeric(par)) {
+    if (length(par) == 1) {
+      return(tibble(val=par))
+    } else {
+      return(tibble(val=par, component=1:length(par)))
+    }
+  } else if (is.list(par)) {
+    next_level <- map(par, unpack_parameter, level + 1)
+    id_name <- paste("par", level + 1, sep="_")
+    bind_rows(next_level, .id=id_name)
+  }
+}
 
+unpack_parameter(foo)
 
+baz = list(c=runif(2), d=foo)
+unpack_parameter(baz)
 
+glmm_par_df <- unpack_parameter(glmm_par_list)
+View(glmm_par_df)
 
 #########
 # I believe this is broken:
+
+quit()
 remove.packages("rPython")
 Sys.setenv(RPYTHON_PYTHON_VERSION=3.5)
 Sys.getenv("PATH")
