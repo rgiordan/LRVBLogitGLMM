@@ -48,9 +48,9 @@ You'll need the following R packages:
 
 ```
 # In R:
-install.packages(devtools)
-install.packages(Rcpp)
-library(devetools)
+install.packages("devtools")
+install.packages("Rcpp")
+library(devtools)
 install_github("rgiordan/LRVBUtils")
 ```
 

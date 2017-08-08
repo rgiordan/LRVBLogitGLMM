@@ -169,7 +169,7 @@ save(stan_sim, mcmc_time, stan_dat,
      map_time,
      chains,
      cores,
-     true_params, pp, file=stan_draws_file)
+     pp, file=stan_draws_file)
 
 # Save the data to a JSON file.
 stan_dat_json <- toJSON(stan_dat)

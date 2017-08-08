@@ -11,7 +11,8 @@ project_directory <-
 source(file.path(project_directory, "LogitGLMMLRVB/inst/optimize_lib.R"))
 
 # analysis_name <- "simulated_data_small"
-analysis_name <- "simulated_data_large"
+# analysis_name <- "simulated_data_large"
+analysis_name <- "criteo_subsampled"
 
 data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
 stan_draws_file <- file.path(data_directory, paste(analysis_name, "_mcmc_draws.Rdata", sep=""))
@@ -42,8 +43,8 @@ json_file <- file(python_filename, "r")
 json_dat <- fromJSON(readLines(json_file))
 close(json_file)
 
-vb_results_file <- file.path(data_directory, paste(analysis_name, "_vb_results.Rdata", sep=""))
-vb_results <- LoadIntoEnvironment(vb_results_file)
+# vb_results_file <- file.path(data_directory, paste(analysis_name, "_vb_results.Rdata", sep=""))
+# vb_results <- LoadIntoEnvironment(vb_results_file)
 
 vp_opt$beta_loc <- json_dat$glmm_par_opt$beta$mean
 vp_opt$beta_info <- json_dat$glmm_par_opt$beta$info

@@ -30,7 +30,7 @@ vb_results_file <- file.path(data_directory, paste(analysis_name, "_vb_python_re
 # If true, save the results to a file readable by knitr.
 save_results <- TRUE
 results_file <- file.path(data_directory,
-                          paste(analysis_name, "_influence.Rdata", sep="_"))
+                          paste(analysis_name, "influence.Rdata", sep="_"))
 
 vb_results <- LoadIntoEnvironment(vb_results_file)
 
@@ -57,18 +57,18 @@ global_mask[global_indices] <- TRUE
 ##################
 # Influence functions
 
-draws_mat <- t(vb_results$draws_mat)
+draws_mat <- vb_results$draws_mat
 lrvb_sd_scale <- sqrt(diag(vb_results$lrvb_results$lrvb_cov))
-mcmc_sd_scale <- sqrt(diag(cov(t(draws_mat)))) 
+mcmc_sd_scale <- sapply(1:ncol(draws_mat), function(col) { sd(draws_mat[, col])})
 
 # Calculating the influence functions are a little slow, so don't calculate all of them.
 influence_k <- min(vp_opt$k_reg, 1)
 
 # The number of draws to use when marginalizing the VB distribution.
-num_mc_draws <- 10
+num_mc_draws <- 30
 
 # The number of draws when evaluating the vb integral over the influence function.
-num_draws <- 50
+num_draws <- 100
 num_bootstraps <- 10
 
 worst_case_list <- list()
@@ -87,7 +87,7 @@ for (beta_comp in 1:influence_k) {
       GetLogQGradTerms = function(u_draws) { beta_funs$GetLogQGradTerms(u_draws, num_mc_draws, normalize=TRUE) },
       GetLogQ = beta_funs$GetLogVariationalDensity,
       GetLogPrior = beta_funs$GetLogPrior)
-    cat("time (seconds): ", Sys.time() - timer, "\n")
+    cat("time: ", Sys.time() - timer, "\n")
     
     # Get MCMC worst-case
     cat("mcmc...\n")
@@ -98,22 +98,19 @@ for (beta_comp in 1:influence_k) {
     mcmc_funs <- GetMCMCInfluenceFunctions(param_draws, beta_funs$GetLogPrior)
     GetMCMCWorstCaseColumn <- function(col) { mcmc_funs$GetMCMCWorstCase(draws_sample[, col]) }
     mcmc_worst_case <- sapply(1:ncol(draws_mat), GetMCMCWorstCaseColumn)
-    cat("time (seconds): ", Sys.time() - timer, "\n")
+    cat("time: ", Sys.time() - timer, "\n")
     
     # Compare
     cat("summarizing...\n")
     worst_case_list[[length(worst_case_list) + 1]] <- rbind(
-      SummarizeVBResults(GetMomentParametersFromVector(mp_opt, mcmc_worst_case, FALSE),
+      SummarizeVBResults(GetMomentParametersFromVector(mp_opt, mcmc_worst_case / mcmc_sd_scale, FALSE),
                          method="mcmc", metric=paste("beta", beta_comp, sep="")),
-      SummarizeVBResults(GetMomentParametersFromVector(mp_opt, beta_influence_results$worst_case, FALSE),
+      SummarizeVBResults(GetMomentParametersFromVector(mp_opt, beta_influence_results$worst_case / lrvb_sd_scale, FALSE),
                          method="lrvb", metric=paste("beta", beta_comp, sep=""))
     ) %>% mutate(sample=sample)
   }
 }
 
-# *******************
-# TODO: this should be normalized by the standard deviations
-# *******************
 worst_case_df <-
   do.call(rbind, worst_case_list) %>%
   group_by(par, component, group, metric, method) %>%
@@ -169,7 +166,8 @@ if (FALSE) {
 beta_comp <- 1
 beta_funs <- GetBetaImportanceFunctions(beta_comp, vp_opt, pp, lrvb_results)
 
-Rprof(tmp <- tempfile())
+# Rprof(tmp <- tempfile())
+vb_influence_time <- Sys.time()
 beta_influence_results <- GetVariationalInfluenceResults(
   num_draws = num_draws,
   DrawImportanceSamples = beta_funs$DrawU,
@@ -177,15 +175,19 @@ beta_influence_results <- GetVariationalInfluenceResults(
   GetLogQGradTerms = function(u_draws) { beta_funs$GetLogQGradTerms(u_draws, num_mc_draws, normalize=TRUE) },
   GetLogQ = beta_funs$GetLogVariationalDensity,
   GetLogPrior = beta_funs$GetLogPrior)
-Rprof()
-summaryRprof(tmp)
+vb_influence_time <- Sys.time() - vb_influence_time
+# Rprof()
+# summaryRprof(tmp)
 
 
 # Get MCMC worst-case
 param_draws <- draws_mat[, mp_indices$beta_e_vec[beta_comp]]
+
+mcmc_influence_time <- Sys.time()
 mcmc_funs <- GetMCMCInfluenceFunctions(param_draws, beta_funs$GetLogPrior)
 GetMCMCWorstCaseColumn <- function(col) { mcmc_funs$GetMCMCWorstCase(draws_mat[, col]) }
 mcmc_worst_case <- sapply(1:ncol(draws_mat), GetMCMCWorstCaseColumn)
+mcmc_influence_time <- Sys.time() - mcmc_influence_time
 
 GetInfluenceDF <- function(u, influence, gbar, log_posterior, log_prior, worst_u, method, metric) {
   data.frame(u=u, influence=influence, gbar=gbar,
@@ -198,8 +200,9 @@ ind <- mp_indices$beta_e_vec[5]
 metric <- sprintf("beta%d_on_ind%d", beta_comp, ind)
 g_draws <- draws_mat[, ind]
 
-
 mcmc_worst <- mcmc_funs$GetMCMCWorstCaseResults(g_draws)
+
+
 mcmc_influence_df <- GetInfluenceDF(
   u=mcmc_funs$param_draws,
   influence=mcmc_worst$mcmc_influence,
@@ -270,5 +273,6 @@ if (FALSE) {
 
 if (save_results) {
   save(worst_case_cast_sds, vb_influence_df, mcmc_influence_df,
+       vb_influence_time, mcmc_influence_time,
        file=results_file)
 }

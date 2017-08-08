@@ -8,7 +8,7 @@ using namespace Rcpp;
 
 // SampleData
 Rcpp::List SampleData(int n_obs, int k_reg, int n_groups);
-RcppExport SEXP LogitGLMMLRVB_SampleData(SEXP n_obsSEXP, SEXP k_regSEXP, SEXP n_groupsSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_SampleData(SEXP n_obsSEXP, SEXP k_regSEXP, SEXP n_groupsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -21,7 +21,7 @@ END_RCPP
 }
 // GetMomentParameterVector
 Eigen::VectorXd GetMomentParameterVector(const Rcpp::List r_vp, bool unconstrained);
-RcppExport SEXP LogitGLMMLRVB_GetMomentParameterVector(SEXP r_vpSEXP, SEXP unconstrainedSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetMomentParameterVector(SEXP r_vpSEXP, SEXP unconstrainedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -33,7 +33,7 @@ END_RCPP
 }
 // GetNaturalParameterVector
 Eigen::VectorXd GetNaturalParameterVector(const Rcpp::List r_vp, bool unconstrained);
-RcppExport SEXP LogitGLMMLRVB_GetNaturalParameterVector(SEXP r_vpSEXP, SEXP unconstrainedSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetNaturalParameterVector(SEXP r_vpSEXP, SEXP unconstrainedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -45,7 +45,7 @@ END_RCPP
 }
 // GetMomentParametersFromNaturalParameters
 Rcpp::List GetMomentParametersFromNaturalParameters(Rcpp::List r_vp_nat);
-RcppExport SEXP LogitGLMMLRVB_GetMomentParametersFromNaturalParameters(SEXP r_vp_natSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetMomentParametersFromNaturalParameters(SEXP r_vp_natSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -56,7 +56,7 @@ END_RCPP
 }
 // GetMomentParametersFromVector
 Rcpp::List GetMomentParametersFromVector(const Rcpp::List r_vp_base, const Eigen::Map<Eigen::VectorXd> r_theta, bool unconstrained);
-RcppExport SEXP LogitGLMMLRVB_GetMomentParametersFromVector(SEXP r_vp_baseSEXP, SEXP r_thetaSEXP, SEXP unconstrainedSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetMomentParametersFromVector(SEXP r_vp_baseSEXP, SEXP r_thetaSEXP, SEXP unconstrainedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -69,7 +69,7 @@ END_RCPP
 }
 // GetNaturalParametersFromVector
 Rcpp::List GetNaturalParametersFromVector(const Rcpp::List r_vp_base, const Eigen::Map<Eigen::VectorXd> r_theta, bool unconstrained);
-RcppExport SEXP LogitGLMMLRVB_GetNaturalParametersFromVector(SEXP r_vp_baseSEXP, SEXP r_thetaSEXP, SEXP unconstrainedSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetNaturalParametersFromVector(SEXP r_vp_baseSEXP, SEXP r_thetaSEXP, SEXP unconstrainedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -82,7 +82,7 @@ END_RCPP
 }
 // GetEmptyPriorParameters
 Rcpp::List GetEmptyPriorParameters(int k_reg);
-RcppExport SEXP LogitGLMMLRVB_GetEmptyPriorParameters(SEXP k_regSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetEmptyPriorParameters(SEXP k_regSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -93,7 +93,7 @@ END_RCPP
 }
 // GetPriorParametersFromVector
 Rcpp::List GetPriorParametersFromVector(const Rcpp::List r_pp, const Eigen::Map<Eigen::VectorXd> r_theta, bool unconstrained);
-RcppExport SEXP LogitGLMMLRVB_GetPriorParametersFromVector(SEXP r_ppSEXP, SEXP r_thetaSEXP, SEXP unconstrainedSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetPriorParametersFromVector(SEXP r_ppSEXP, SEXP r_thetaSEXP, SEXP unconstrainedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -106,7 +106,7 @@ END_RCPP
 }
 // GetPriorParametersVector
 Eigen::VectorXd GetPriorParametersVector(const Rcpp::List r_pp, bool unconstrained);
-RcppExport SEXP LogitGLMMLRVB_GetPriorParametersVector(SEXP r_ppSEXP, SEXP unconstrainedSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetPriorParametersVector(SEXP r_ppSEXP, SEXP unconstrainedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -118,7 +118,7 @@ END_RCPP
 }
 // GetPriorsAndNaturalParametersFromVector
 Rcpp::List GetPriorsAndNaturalParametersFromVector(const Rcpp::List r_vp_base, const Rcpp::List r_pp_base, const Eigen::Map<Eigen::VectorXd> r_theta, bool unconstrained);
-RcppExport SEXP LogitGLMMLRVB_GetPriorsAndNaturalParametersFromVector(SEXP r_vp_baseSEXP, SEXP r_pp_baseSEXP, SEXP r_thetaSEXP, SEXP unconstrainedSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetPriorsAndNaturalParametersFromVector(SEXP r_vp_baseSEXP, SEXP r_pp_baseSEXP, SEXP r_thetaSEXP, SEXP unconstrainedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -132,7 +132,7 @@ END_RCPP
 }
 // GetPriorsAndNaturalParametersVector
 Eigen::VectorXd GetPriorsAndNaturalParametersVector(const Rcpp::List r_vp_base, const Rcpp::List r_pp_base, bool unconstrained);
-RcppExport SEXP LogitGLMMLRVB_GetPriorsAndNaturalParametersVector(SEXP r_vp_baseSEXP, SEXP r_pp_baseSEXP, SEXP unconstrainedSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetPriorsAndNaturalParametersVector(SEXP r_vp_baseSEXP, SEXP r_pp_baseSEXP, SEXP unconstrainedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -145,7 +145,7 @@ END_RCPP
 }
 // GetLogLikDerivatives
 Rcpp::List GetLogLikDerivatives(const Eigen::Map<Eigen::VectorXi> r_y, const Eigen::Map<Eigen::VectorXi> r_y_g, const Eigen::Map<Eigen::MatrixXd> r_x, const Rcpp::List r_vp, const Rcpp::List r_opt);
-RcppExport SEXP LogitGLMMLRVB_GetLogLikDerivatives(SEXP r_ySEXP, SEXP r_y_gSEXP, SEXP r_xSEXP, SEXP r_vpSEXP, SEXP r_optSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetLogLikDerivatives(SEXP r_ySEXP, SEXP r_y_gSEXP, SEXP r_xSEXP, SEXP r_vpSEXP, SEXP r_optSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -160,7 +160,7 @@ END_RCPP
 }
 // GetLogPriorDerivatives
 Rcpp::List GetLogPriorDerivatives(const Rcpp::List r_vp, const Rcpp::List r_pp, const Rcpp::List r_opt);
-RcppExport SEXP LogitGLMMLRVB_GetLogPriorDerivatives(SEXP r_vpSEXP, SEXP r_ppSEXP, SEXP r_optSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetLogPriorDerivatives(SEXP r_vpSEXP, SEXP r_ppSEXP, SEXP r_optSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -173,7 +173,7 @@ END_RCPP
 }
 // GetFullModelLogPriorDerivatives
 Rcpp::List GetFullModelLogPriorDerivatives(const Rcpp::List r_vp, const Rcpp::List r_pp, const Rcpp::List r_opt);
-RcppExport SEXP LogitGLMMLRVB_GetFullModelLogPriorDerivatives(SEXP r_vpSEXP, SEXP r_ppSEXP, SEXP r_optSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetFullModelLogPriorDerivatives(SEXP r_vpSEXP, SEXP r_ppSEXP, SEXP r_optSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -186,7 +186,7 @@ END_RCPP
 }
 // GetLogVariationalDensityDerivatives
 Rcpp::List GetLogVariationalDensityDerivatives(const Rcpp::List r_obs, const Rcpp::List r_vp, const Rcpp::List r_opt, bool global_only, bool include_beta, bool include_mu, bool include_tau);
-RcppExport SEXP LogitGLMMLRVB_GetLogVariationalDensityDerivatives(SEXP r_obsSEXP, SEXP r_vpSEXP, SEXP r_optSEXP, SEXP global_onlySEXP, SEXP include_betaSEXP, SEXP include_muSEXP, SEXP include_tauSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetLogVariationalDensityDerivatives(SEXP r_obsSEXP, SEXP r_vpSEXP, SEXP r_optSEXP, SEXP global_onlySEXP, SEXP include_betaSEXP, SEXP include_muSEXP, SEXP include_tauSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -203,7 +203,7 @@ END_RCPP
 }
 // GetMCMCLogPriorDerivatives
 Rcpp::List GetMCMCLogPriorDerivatives(const Rcpp::List draw_list, const Rcpp::List r_pp, const Rcpp::List r_opt);
-RcppExport SEXP LogitGLMMLRVB_GetMCMCLogPriorDerivatives(SEXP draw_listSEXP, SEXP r_ppSEXP, SEXP r_optSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetMCMCLogPriorDerivatives(SEXP draw_listSEXP, SEXP r_ppSEXP, SEXP r_optSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -216,7 +216,7 @@ END_RCPP
 }
 // GetELBODerivatives
 Rcpp::List GetELBODerivatives(const Eigen::Map<Eigen::VectorXi> r_y, const Eigen::Map<Eigen::VectorXi> r_y_g, const Eigen::Map<Eigen::MatrixXd> r_x, const Rcpp::List r_vp, const Rcpp::List r_pp, const Rcpp::List r_opt);
-RcppExport SEXP LogitGLMMLRVB_GetELBODerivatives(SEXP r_ySEXP, SEXP r_y_gSEXP, SEXP r_xSEXP, SEXP r_vpSEXP, SEXP r_ppSEXP, SEXP r_optSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetELBODerivatives(SEXP r_ySEXP, SEXP r_y_gSEXP, SEXP r_xSEXP, SEXP r_vpSEXP, SEXP r_ppSEXP, SEXP r_optSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -232,7 +232,7 @@ END_RCPP
 }
 // GetEntropyDerivatives
 Rcpp::List GetEntropyDerivatives(const Rcpp::List r_vp, const Rcpp::List r_opt);
-RcppExport SEXP LogitGLMMLRVB_GetEntropyDerivatives(SEXP r_vpSEXP, SEXP r_optSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetEntropyDerivatives(SEXP r_vpSEXP, SEXP r_optSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -244,7 +244,7 @@ END_RCPP
 }
 // GetCovariance
 Eigen::SparseMatrix<double> GetCovariance(const Rcpp::List r_vp);
-RcppExport SEXP LogitGLMMLRVB_GetCovariance(SEXP r_vpSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetCovariance(SEXP r_vpSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -255,7 +255,7 @@ END_RCPP
 }
 // GetMomentJacobian
 Rcpp::List GetMomentJacobian(const Rcpp::List r_vp, const Rcpp::List r_opt);
-RcppExport SEXP LogitGLMMLRVB_GetMomentJacobian(SEXP r_vpSEXP, SEXP r_optSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetMomentJacobian(SEXP r_vpSEXP, SEXP r_optSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -267,7 +267,7 @@ END_RCPP
 }
 // GetSparseLogLikHessian
 Eigen::SparseMatrix<double> GetSparseLogLikHessian(const Eigen::Map<Eigen::VectorXi> r_y, const Eigen::Map<Eigen::VectorXi> r_y_g, const Eigen::Map<Eigen::MatrixXd> r_x, const Rcpp::List r_vp, const Rcpp::List r_pp, const Rcpp::List r_opt, const bool include_prior);
-RcppExport SEXP LogitGLMMLRVB_GetSparseLogLikHessian(SEXP r_ySEXP, SEXP r_y_gSEXP, SEXP r_xSEXP, SEXP r_vpSEXP, SEXP r_ppSEXP, SEXP r_optSEXP, SEXP include_priorSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetSparseLogLikHessian(SEXP r_ySEXP, SEXP r_y_gSEXP, SEXP r_xSEXP, SEXP r_vpSEXP, SEXP r_ppSEXP, SEXP r_optSEXP, SEXP include_priorSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -284,7 +284,7 @@ END_RCPP
 }
 // GetSparseEntropyHessian
 Eigen::SparseMatrix<double> GetSparseEntropyHessian(const Rcpp::List r_vp, const Rcpp::List r_opt);
-RcppExport SEXP LogitGLMMLRVB_GetSparseEntropyHessian(SEXP r_vpSEXP, SEXP r_optSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetSparseEntropyHessian(SEXP r_vpSEXP, SEXP r_optSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -296,7 +296,7 @@ END_RCPP
 }
 // GetSparseELBOHessian
 Eigen::SparseMatrix<double> GetSparseELBOHessian(const Eigen::Map<Eigen::VectorXi> r_y, const Eigen::Map<Eigen::VectorXi> r_y_g, const Eigen::Map<Eigen::MatrixXd> r_x, const Rcpp::List r_vp, const Rcpp::List r_pp, const Rcpp::List r_opt, const bool include_prior);
-RcppExport SEXP LogitGLMMLRVB_GetSparseELBOHessian(SEXP r_ySEXP, SEXP r_y_gSEXP, SEXP r_xSEXP, SEXP r_vpSEXP, SEXP r_ppSEXP, SEXP r_optSEXP, SEXP include_priorSEXP) {
+RcppExport SEXP _LogitGLMMLRVB_GetSparseELBOHessian(SEXP r_ySEXP, SEXP r_y_gSEXP, SEXP r_xSEXP, SEXP r_vpSEXP, SEXP r_ppSEXP, SEXP r_optSEXP, SEXP include_priorSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -310,4 +310,36 @@ BEGIN_RCPP
     rcpp_result_gen = Rcpp::wrap(GetSparseELBOHessian(r_y, r_y_g, r_x, r_vp, r_pp, r_opt, include_prior));
     return rcpp_result_gen;
 END_RCPP
+}
+
+static const R_CallMethodDef CallEntries[] = {
+    {"_LogitGLMMLRVB_SampleData", (DL_FUNC) &_LogitGLMMLRVB_SampleData, 3},
+    {"_LogitGLMMLRVB_GetMomentParameterVector", (DL_FUNC) &_LogitGLMMLRVB_GetMomentParameterVector, 2},
+    {"_LogitGLMMLRVB_GetNaturalParameterVector", (DL_FUNC) &_LogitGLMMLRVB_GetNaturalParameterVector, 2},
+    {"_LogitGLMMLRVB_GetMomentParametersFromNaturalParameters", (DL_FUNC) &_LogitGLMMLRVB_GetMomentParametersFromNaturalParameters, 1},
+    {"_LogitGLMMLRVB_GetMomentParametersFromVector", (DL_FUNC) &_LogitGLMMLRVB_GetMomentParametersFromVector, 3},
+    {"_LogitGLMMLRVB_GetNaturalParametersFromVector", (DL_FUNC) &_LogitGLMMLRVB_GetNaturalParametersFromVector, 3},
+    {"_LogitGLMMLRVB_GetEmptyPriorParameters", (DL_FUNC) &_LogitGLMMLRVB_GetEmptyPriorParameters, 1},
+    {"_LogitGLMMLRVB_GetPriorParametersFromVector", (DL_FUNC) &_LogitGLMMLRVB_GetPriorParametersFromVector, 3},
+    {"_LogitGLMMLRVB_GetPriorParametersVector", (DL_FUNC) &_LogitGLMMLRVB_GetPriorParametersVector, 2},
+    {"_LogitGLMMLRVB_GetPriorsAndNaturalParametersFromVector", (DL_FUNC) &_LogitGLMMLRVB_GetPriorsAndNaturalParametersFromVector, 4},
+    {"_LogitGLMMLRVB_GetPriorsAndNaturalParametersVector", (DL_FUNC) &_LogitGLMMLRVB_GetPriorsAndNaturalParametersVector, 3},
+    {"_LogitGLMMLRVB_GetLogLikDerivatives", (DL_FUNC) &_LogitGLMMLRVB_GetLogLikDerivatives, 5},
+    {"_LogitGLMMLRVB_GetLogPriorDerivatives", (DL_FUNC) &_LogitGLMMLRVB_GetLogPriorDerivatives, 3},
+    {"_LogitGLMMLRVB_GetFullModelLogPriorDerivatives", (DL_FUNC) &_LogitGLMMLRVB_GetFullModelLogPriorDerivatives, 3},
+    {"_LogitGLMMLRVB_GetLogVariationalDensityDerivatives", (DL_FUNC) &_LogitGLMMLRVB_GetLogVariationalDensityDerivatives, 7},
+    {"_LogitGLMMLRVB_GetMCMCLogPriorDerivatives", (DL_FUNC) &_LogitGLMMLRVB_GetMCMCLogPriorDerivatives, 3},
+    {"_LogitGLMMLRVB_GetELBODerivatives", (DL_FUNC) &_LogitGLMMLRVB_GetELBODerivatives, 6},
+    {"_LogitGLMMLRVB_GetEntropyDerivatives", (DL_FUNC) &_LogitGLMMLRVB_GetEntropyDerivatives, 2},
+    {"_LogitGLMMLRVB_GetCovariance", (DL_FUNC) &_LogitGLMMLRVB_GetCovariance, 1},
+    {"_LogitGLMMLRVB_GetMomentJacobian", (DL_FUNC) &_LogitGLMMLRVB_GetMomentJacobian, 2},
+    {"_LogitGLMMLRVB_GetSparseLogLikHessian", (DL_FUNC) &_LogitGLMMLRVB_GetSparseLogLikHessian, 7},
+    {"_LogitGLMMLRVB_GetSparseEntropyHessian", (DL_FUNC) &_LogitGLMMLRVB_GetSparseEntropyHessian, 2},
+    {"_LogitGLMMLRVB_GetSparseELBOHessian", (DL_FUNC) &_LogitGLMMLRVB_GetSparseELBOHessian, 7},
+    {NULL, NULL, 0}
+};
+
+RcppExport void R_init_LogitGLMMLRVB(DllInfo *dll) {
+    R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
+    R_useDynamicSymbols(dll, FALSE);
 }

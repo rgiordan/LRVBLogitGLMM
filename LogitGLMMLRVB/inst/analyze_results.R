@@ -18,7 +18,8 @@ project_directory <-
 source(file.path(project_directory, "LogitGLMMLRVB/inst/densities_lib.R"))
 
 #analysis_name <- "simulated_data_small"
-analysis_name <- "simulated_data_large"
+#analysis_name <- "simulated_data_large"
+analysis_name <- "criteo_subsampled"
 
 data_directory <- file.path(project_directory, "LogitGLMMLRVB/inst/data/")
 
@@ -238,6 +239,17 @@ ggplot(
   scale_color_discrete(guide=guide_legend(title="Method")) +
   geom_abline(aes(intercept=0, slope=1))
 
+ggplot(
+  filter(results, metric == "sd", par == "mu") %>%
+    dcast(par + component + group ~ method, value.var="val")
+) +
+  geom_point(aes(x=mcmc, y=mfvb, color="mfvb", shape=par), size=3) +
+  geom_point(aes(x=mcmc, y=lrvb, color="lrvb", shape=par), size=3) +
+  expand_limits(x=0, y=0) +
+  xlab("MCMC (ground truth)") + ylab("VB") +
+  scale_color_discrete(guide=guide_legend(title="Method")) +
+  geom_abline(aes(intercept=0, slope=1))
+
 
 ggplot(
   filter(results, metric == "sd", par != "u") %>%
@@ -265,6 +277,9 @@ ggplot(
 ggplot(filter(prior_sens_cast, par != "u")) +
   geom_point(aes(x=lrvb_norm, y=mcmc_norm, color=par)) +
   geom_abline(aes(intercept=0, slope=1))
+
+
+# Note: mcmc_norm_sd is not here because it doens't work with the aggregation.
 
 # Compare LRVB with the MCMC standard deviations
 ggplot(filter(prior_sens_cast, par=="u")) +
